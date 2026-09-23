@@ -2,7 +2,7 @@
 name: docs
 version: 1.0.0
 description: Scaffold, read, validate, extend, and repair product documentation that constrains AI agents to a product's intent.
-source: https://github.com/sinavali/docs-skill
+source: https://github.com/<user>/docs-skill
 license: MIT
 ---
 
@@ -35,6 +35,8 @@ The skill is pure Markdown. It contains no scripts, no OS-specific content, and 
 
 Load only the mode file required for the current operation. Load `rules/*.md` only when a mode references them. Load `templates/*.md` only when generating new files. Never load the whole skill tree at once.
 
+This same rule governs product docs: load only the section a task requires. Sectioning exists to make that possible.
+
 ## Invocation Contract
 
 1. The caller states the mode and the anchor path (the directory where work begins).
@@ -59,6 +61,18 @@ These apply in every mode. They are not repeated per mode.
 8. **MUST** use the numbering scheme per `rules/numbering.md` when generating file or directory names.
 9. **MUST** be lossless in `repair` mode: never delete semantic content without an NC item.
 10. **MUST NOT** assume a VCS, CI system, OS, or platform. If a mode requires one and none is present, follow the mode's fallback.
+11. **MUST** keep every loadable unit under the one-screen threshold, recursively, per `rules/sectioning.md`. A section file is subject to the same threshold as a top-level doc. Sectioning is semantic, not mechanical.
+
+## Sectioning (Always in Force)
+
+Sectioning exists to keep every loadable unit small enough to load whole, without losing content. See `rules/sectioning.md`.
+
+- A doc or section that crosses the **soft** threshold (~150 lines / ~1000 words) **SHOULD** be sectioned.
+- A doc or section that crosses the **hard** threshold (~300 lines / ~2000 words) **MUST** be sectioned.
+- Sectioning is **recursive**: a section file that crosses the threshold becomes a directory with its own `INDEX.md` and section files.
+- Sectioning is **semantic**: one concern per section, independently loadable, no duplication. Not a byte-count slice, not a heading-depth mirror.
+- Doc IDs remain stable across a conversion. Only content moves.
+- Depth is emergent, unbounded, and governed by content size at each level — not by a fixed cap.
 
 ## Failure Behavior
 
