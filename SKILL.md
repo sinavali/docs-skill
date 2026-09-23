@@ -2,7 +2,7 @@
 name: docs
 version: 1.0.0
 description: Scaffold, read, validate, extend, and repair product documentation that constrains AI agents to a product's intent.
-source: https://github.com/<user>/docs-skill
+source: https://github.com/sinavali/docs-skill
 license: MIT
 ---
 
