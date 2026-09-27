@@ -1,100 +1,106 @@
 ---
 name: docs
-version: 1.0.0
-description: Scaffold, read, validate, extend, and repair product documentation that constrains AI agents to a product's intent.
-source: https://github.com/<user>/docs-skill
-license: MIT
+purpose: Manage product documentation that constrains AI agents, with impact analysis for reliable change discovery.
 ---
 
-# docs
+# Skill — `docs`
 
-A skill for managing the documentation system defined by the **AI-Driven Product Documentation Guideline**.
+An installable, pure-Markdown skill for managing product documentation that
+constrains AI agents to a product's intent.
 
-The skill is pure Markdown. It contains no scripts, no OS-specific content, and no platform APIs. It works on a filesystem, on any VCS, with or without an agentic platform.
+This skill implements the **AI-Driven Product Documentation Guideline** and an
+**impact-analysis layer** that turns a change request into a bounded Change Surface
+before any code is written.
 
-## When to Use
+## Entry Point
 
-- Before reading any doc.
-- Before writing any doc.
-- Before scaffolding docs for a new product.
-- Before repairing docs in an existing product.
-- Before validating the integrity of a docs tree.
+The agent always loads `SKILL.md` first. All other files load on demand.
+
+## Load-On-Demand
+
+- Load a mode file only when that mode is active.
+- Load a rule file only when a mode references it and the task needs it.
+- Load a template only when producing a file of that kind.
+- Never load the whole skill into context.
+
+## The Three Layers
+
+```text
+1. DOCUMENTATION GRAPH   domains / flows / docs / typed relations
+2. CODE SURFACE          docs -> directories/files (code_paths, test_paths)
+3. CODE REFERENCES       grep / LSP / compiler, only when needed
+```
+
+Descend only when the task requires it. This preserves progressive disclosure.
 
 ## Modes
 
-| Mode | Purpose | Modifies files? |
+| Mode | Purpose | Modifies files |
 |---|---|---|
-| `read` | Load only the sections needed for the current task. | No |
-| `index` | Build a path-only index of docs. | No |
-| `validate` | Check integrity. Report only. | No |
-| `extend` | Add a doc or section on demand. | Yes |
-| `init` | Scaffold a fresh product. Org-level access required. | Yes |
-| `repair` | Fix an existing docs tree. Lossless. Org-level access required. | Yes |
+| `read` | Load only the sections the task needs, following the impact graph for changes. | no |
+| `index` | Discover topology, metadata, and relationships. Produce a compact semantic index. | no |
+| `impact` | Turn a change request into a Change Surface. | no |
+| `validate` | Check tree and graph integrity. Report only. | no |
+| `extend` | Add a doc or section, with mandatory impact metadata. | yes |
+| `init` | Scaffold a fresh product docs tree. | yes |
+| `repair` | Fix an existing docs tree losslessly. | yes |
 
-## Load-on-Demand Rule
+## Modes — Order for a Change
 
-Load only the mode file required for the current operation. Load `rules/*.md` only when a mode references them. Load `templates/*.md` only when generating new files. Never load the whole skill tree at once.
+```text
+impact  ->  Change Surface  ->  (coder)  ->  diff  ->  (reviewer)
+```
 
-This same rule governs product docs: load only the section a task requires. Sectioning exists to make that possible.
+- The orchestrator runs `impact`.
+- The coder implements the declared surface.
+- The reviewer verifies coverage against the surface and may mark it incomplete,
+  returning control to the orchestrator.
 
-## Invocation Contract
+## Rules
 
-1. The caller states the mode and the anchor path (the directory where work begins).
-2. The skill loads `SKILL.md` (this file).
-3. The skill loads the mode file named by the caller.
-4. The mode file names any `rules/*.md` and `templates/*.md` it needs.
-5. The skill loads those, then executes the mode contract.
+| Rule | Purpose |
+|---|---|
+| `rules/frontmatter.md` | Required and optional fields, including impact metadata. |
+| `rules/numbering.md` | 3-digit accumulation, gaps, insertion, stable doc IDs. |
+| `rules/sectioning.md` | Sectioning doctrine: threshold, recursion, practical boundaries. |
+| `rules/file-level.md` | Sibling `<filename>.md` discovery. |
+| `rules/precedence.md` | Conflict resolution order. |
+| `rules/nc.md` | NEED_CLEARIFICATION lifecycle and schema. |
+| `rules/excluded-paths.md` | Default exclusion list and re-inclusion. |
+| `rules/relationships.md` | Typed relationship model. |
+| `rules/impact.md` | Change Surface and impact analysis. |
+| `rules/index-format.md` | Semantic routing map and global map. |
+| `rules/graph.md` | Generated graph artifacts and the docs-map tool. |
 
-If the caller does not name a mode, the skill defaults to `read`.
+## Templates
 
-## Core Rules (Always in Force)
-
-These apply in every mode. They are not repeated per mode.
-
-1. **MUST NOT** write into excluded paths. The exclusion list is declared in `AGENT.md` frontmatter; defaults are in `rules/excluded-paths.md`.
-2. **MUST NOT** edit `README.md`. It is human-facing only.
-3. **MUST NOT** draw product intent from `README.md`.
-4. **MUST** reference docs by stable doc ID, not by raw path, in generated cross-links.
-5. **MUST** build a path index before loading any section contents.
-6. **MUST** log to `NEED_CLEARIFICATION.md` when a required doc is missing or ambiguous. Schema is in `rules/nc.md`.
-7. **MUST** respect precedence per `rules/precedence.md` when two docs conflict.
-8. **MUST** use the numbering scheme per `rules/numbering.md` when generating file or directory names.
-9. **MUST** be lossless in `repair` mode: never delete semantic content without an NC item.
-10. **MUST NOT** assume a VCS, CI system, OS, or platform. If a mode requires one and none is present, follow the mode's fallback.
-11. **MUST** keep every loadable unit under the one-screen threshold, recursively, per `rules/sectioning.md`. A section file is subject to the same threshold as a top-level doc. Sectioning is semantic, not mechanical.
-
-## Sectioning (Always in Force)
-
-Sectioning exists to keep every loadable unit small enough to load whole, without losing content. See `rules/sectioning.md`.
-
-- A doc or section that crosses the **soft** threshold (~150 lines / ~1000 words) **SHOULD** be sectioned.
-- A doc or section that crosses the **hard** threshold (~300 lines / ~2000 words) **MUST** be sectioned.
-- Sectioning is **recursive**: a section file that crosses the threshold becomes a directory with its own `INDEX.md` and section files.
-- Sectioning is **semantic**: one concern per section, independently loadable, no duplication. Not a byte-count slice, not a heading-depth mirror.
-- Doc IDs remain stable across a conversion. Only content moves.
-- Depth is emergent, unbounded, and governed by content size at each level — not by a fixed cap.
+| Template | Kind |
+|---|---|
+| `templates/agent.md` | `AGENT.md` |
+| `templates/index.md` | Directory routing `INDEX.md` |
+| `templates/index-global.md` | Global `docs/INDEX.md` map |
+| `templates/section.md` | Section file |
+| `templates/contract.md` | Contract doc |
+| `templates/decision.md` | Decision doc |
+| `templates/cross-cutting.md` | Cross-cutting doc |
+| `templates/runbook.md` | Operational doc |
+| `templates/flow.md` | Cross-domain flow doc |
+| `templates/change-surface.md` | Change Surface artifact |
+| `templates/nc-item.md` | NEED_CLEARIFICATION item |
 
 ## Failure Behavior
 
-If the skill cannot proceed:
+- Missing required doc -> NC item, do not invent.
+- Same-level conflict -> NC item, stop.
+- Missing `AGENT.md` -> treat repo root as org-root, NC item.
+- Missing impact metadata on a code-governing doc -> validate warning.
+- Broken graph edge -> validate error.
 
-1. Create or update `NEED_CLEARIFICATION.md` at the current anchor's scope.
-2. If `NEED_CLEARIFICATION.md` cannot be written (e.g., no write access), return the NC item body to the caller as text.
-3. Return control to the caller with a clear message stating:
-   - which mode failed,
-   - which rule or doc was the blocker,
-   - what the caller must do next.
+## Core Principles
 
-Never invent missing intent. Never guess a doc's contents.
-
-## Installation
-
-1. Human provides the skill repo URL.
-2. Agent fetches the repo via its platform's mechanism.
-3. Agent installs the skill into the platform's skill directory (e.g., `.opencode/skills/docs/`).
-4. If no platform skill directory exists, agent places the skill in the org-root under `skills/docs/`.
-5. The skill is registered with the platform.
-
-## Version
-
-`version: 1.0.0`. This field belongs to the skill, not to any product doc. Product docs carry no version field.
+- **Docs lead, code follows.**
+- **Two audiences, two files:** `README.md` for humans, `AGENT.md` for agents.
+- **Breadth of metadata, narrowness of content.** Discover broadly, load narrowly.
+- **Ambiguity is recorded, not invented.** Every gap becomes an NC item.
+- **No versions, no status, no changelog.** VCS is the version store.
+- **Impact before implementation.** No non-trivial change without a Change Surface.

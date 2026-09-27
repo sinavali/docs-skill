@@ -1,0 +1,9 @@
+{
+  "name": "docs-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generate and query the docs-skill documentation graph.",
+  "bin": { "docs-map": "index.js" },
+  "main": "index.js",
+  "license": "MIT"
+}

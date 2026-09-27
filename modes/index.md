@@ -1,29 +1,39 @@
 ---
 name: index
-purpose: Build a path-only index of docs.
+purpose: Discover documentation topology, metadata, and relationships. Produce a compact semantic index, not a content dump.
 modifies_files: false
 requires_access: read
 ---
 
 # Mode — `index`
 
-**Purpose:** Build a path-only index of docs within a scope. Contents are not loaded.
+**Purpose:** Discover the documentation graph — topology, metadata, and typed
+relationships — and produce a compact semantic index. Contents are not loaded.
+
+This is **not** a path listing. A path listing answers "which files exist?". The
+semantic index answers "which documents are relevant to X, and how are they
+connected?".
 
 **Inputs:**
 - `anchor_path` — the directory where indexing begins.
-- `depth` — optional. Defaults to 2 levels below the anchor.
-- `max_entries` — optional. Defaults to 500.
+- `depth` — optional. Defaults to **unbounded** for metadata discovery. Metadata is
+  cheap; content is not. There is no default depth cap on the metadata pass.
+- `max_entries` — optional. Defaults to 2000. Applies to metadata entries, not to
+  filesystem paths.
 
 **Outputs:**
-- A structured list of:
-  - every `AGENT.md` in scope,
-  - every `INDEX.md` in scope,
-  - every section filename with its one-line purpose (from the parent `INDEX.md`),
-  - every sibling `<filename>.md` (file-level doc) in scope,
-  - every doc ID discovered, derived per `rules/numbering.md`.
+- A compact semantic index of every doc discovered:
+  - `id`, `title`, `kind`, `level`,
+  - `domains`, `flows`, `keywords`,
+  - `references`, `affects`, `implements`, `depends_on`,
+  - `code_paths`, `test_paths`.
+- The set of flows and domains discovered.
+- The set of edges discovered.
 
 **References:**
 - `rules/frontmatter.md`
+- `rules/relationships.md`
+- `rules/index-format.md`
 - `rules/numbering.md`
 - `rules/file-level.md`
 - `rules/excluded-paths.md`
@@ -32,15 +42,22 @@ requires_access: read
 
 ## Steps
 
-1. **Find nearest `AGENT.md`** from `anchor_path`. If none, treat repo root as anchor and log an NC item.
-2. **Read the anchor `AGENT.md` frontmatter.** Respect `excluded_paths` and `included_paths`.
-3. **Recurse** the anchor's subtree up to `depth` levels (default 2).
-4. **Collect:**
-   - All `AGENT.md` files.
-   - All `INDEX.md` files, reading only their frontmatter and their section tables.
-   - All filenames in directories that contain an `INDEX.md`, taking the one-line purpose from the index table.
-   - All sibling `<filename>.md` files next to source files (file-level docs).
-5. **Stop and report** if either the depth or the `max_entries` cap is reached before completion.
+1. **Find nearest `AGENT.md`** from `anchor_path`. If none, treat repo root as
+   anchor and log an NC item.
+2. **Read the anchor `AGENT.md` frontmatter.** Respect `excluded_paths` and
+   `included_paths`.
+3. **Discover topology.** Recurse the anchor's subtree. Unlike a path index, the
+   metadata pass is **not** capped at depth 2. Metadata is cheap. Discover every
+   doc, every `INDEX.md`, every `AGENT.md`, and every file-level `<filename>.md`.
+4. **Discover metadata.** For each doc, read **only its frontmatter**. Extract the
+   fields listed in Outputs. Do not read bodies.
+5. **Discover relationships.** Build the edge set from the frontmatter:
+   - `references`, `affects`, `implements`, `depends_on` edges as authored,
+   - `code_paths` and `test_paths` as code bridges.
+6. **Derive reverse edges.** Compute `referenced_by`, `affected_by`,
+   `implemented_by`. Do **not** read them from disk; they are never authored.
+7. **Produce the compact semantic index.** One record per doc. No content.
+8. **Stop and report** if `max_entries` is reached before completion.
 
 ---
 
@@ -48,29 +65,28 @@ requires_access: read
 
 ```text
 scope: <anchor id>
-depth: <effective depth>
 entries: <count> / <max_entries>
 
-AGENTS
-  - path: <path>
-    id: <id>
-    scope: <scope>
+DOMAINS
+  - <domain>
 
-INDICES
-  - path: <path>
-    id: <id>
-    sections: <count>
+FLOWS
+  - <flow>
 
-SECTIONS
-  - path: <path>
-    id: <id>
-    parent: <index id>
-    purpose: <one-line>
+DOCS
+  - id: <id>
+    path: <path>
+    domains: [<domain>, ...]
+    flows: [<flow>, ...]
+    keywords: [<keyword>, ...]
+    references: [<id>, ...]
+    affects: [<id>, ...]
+    implements: [<flow>, ...]
+    code_paths: [<glob>, ...]
+    test_paths: [<glob>, ...]
 
-FILE_LEVEL
-  - path: <path>
-    id: <id>
-    file: <source path>
+EDGES
+  - <from> -> <to>  (<references|affects|implements|depends_on>)
 
 TRUNCATED: <yes | no>
 REASON: <if truncated>
@@ -80,9 +96,11 @@ REASON: <if truncated>
 
 ## Rules
 
-- **MUST NOT** load section contents. Only frontmatter and index tables.
-- **MUST** respect the `max_entries` cap. If exceeded, stop and create an NC item requesting guidance.
-- **MUST** respect the `depth` limit. Deeper trees are not indexed without an explicit caller instruction.
+- **MUST NOT** load document bodies. Frontmatter and index tables only.
+- **MUST NOT** cap the metadata pass at depth 2. Depth is a *content* concern, not a
+  *metadata* concern. Breadth of metadata, narrowness of content.
+- **MUST** derive reverse edges; **MUST NOT** read or author them.
+- **MUST** respect `max_entries`. If exceeded, stop and create an NC item.
 - **MUST NOT** index excluded paths.
 - **MUST NOT** write anything to disk.
 
@@ -90,40 +108,52 @@ REASON: <if truncated>
 
 ## Example
 
-Anchor: `payments-api/`. Depth: 2. Max entries: 500.
+Anchor: `payments-api/`. Unbounded metadata depth. Max entries: 2000.
 
 Result:
 
 ```text
 scope: repo:payments-api
-depth: 2
-entries: 47 / 500
+entries: 47 / 2000
 
-AGENTS
-  - path: payments-api/AGENT.md
-    id: repo:payments-api/agent
-    scope: payments/api
+DOMAINS
+  - auth
+  - users
+  - notifications
 
-INDICES
-  - path: payments-api/docs/INDEX.md
-    id: repo:payments-api
-    sections: 6
-  - path: payments-api/docs/002-blueprint/INDEX.md
-    id: repo:payments-api/blueprint
-    sections: 5
+FLOWS
+  - registration
+  - login
 
-SECTIONS
-  - path: payments-api/docs/002-blueprint/002-001-overview.md
-    id: repo:payments-api/blueprint/overview
-    parent: repo:payments-api/blueprint
-    purpose: What Payments API is
+DOCS
+  - id: auth/registration
+    path: docs/002-blueprint/002-004-registration.md
+    domains: [auth, users]
+    flows: [registration]
+    keywords: [registration, signup, account creation]
+    references: [auth/verification, users/lifecycle]
+    affects: [notifications/email-verification]
+    implements: [registration]
+    code_paths: [packages/auth/src/registration/**]
+    test_paths: [packages/auth/test/registration/**]
   ...
 
-FILE_LEVEL
-  - path: payments-api/src/refunds/refund.ts.md
-    id: file:payments-api/refunds/refund
-    file: refund.ts
+EDGES
+  - auth/registration -> auth/verification  (references)
+  - auth/registration -> notifications/email-verification  (affects)
+  - auth/registration -> registration  (implements)
 
 TRUNCATED: no
 REASON: —
 ```
+
+### Anti-Pattern — Do Not Do This
+
+```text
+# WRONG: simply increasing depth from 2 to 10
+index --depth 10
+```
+
+That only moves the problem. The correct change is:
+
+> make metadata discovery **broad**, keep content loading **narrow**.

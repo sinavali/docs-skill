@@ -149,3 +149,108 @@ SUMMARY
   conflicts: 1
   sectioning violations: 1
 ```
+---
+
+## Graph Integrity Checks
+
+`validate` MUST also check the relationship graph, not just structure.
+
+### Broken IDs
+
+For every edge in `references`, `affects`, `implements`, `depends_on`:
+
+```text
+DOC-AUTH-001
+  references DOC-USER-999
+
+ERROR:
+DOC-USER-999 does not exist
+```
+
+### Broken Edges
+
+- A `references`/`affects`/`depends_on` target that is not a doc ID.
+- An `implements` target that is not a known flow ID.
+- A `code_paths` / `test_paths` glob that matches nothing in the tree.
+
+### Reverse-Edge Drift
+
+If a doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`),
+that is an error. Reverse edges are derived, never authored.
+
+### Flow Integrity
+
+- A flow that references a nonexistent domain.
+- An orphaned high-level flow (declared in the global map but implemented by no doc).
+- A flow with no `code_paths` reachable through its implementers.
+
+### Duplicate Semantic Source
+
+Two docs whose `code_paths` fully overlap and whose `domains` and `flows` match are a
+possible single-source-of-truth violation. Report as a warning.
+
+These checks require **no LLM**. They are deterministic.
+
+Add to the report shape:
+
+```text
+GRAPH
+  - ERROR: <doc>: <edge> -> <missing id>
+  - ERROR: <doc>: authors reverse edge <edge>
+  - ERROR: <flow>: references nonexistent domain <domain>
+  - WARN: <flow>: orphaned (no implementer)
+  - WARN: <doc A> and <doc B>: duplicate semantic source
+```
+
+---
+
+## Graph Integrity Checks
+
+`validate` MUST also check the relationship graph, not just structure.
+
+### Broken IDs
+
+For every edge in `references`, `affects`, `implements`, `depends_on`:
+
+```text
+DOC-AUTH-001
+  references DOC-USER-999
+
+ERROR:
+DOC-USER-999 does not exist
+```
+
+### Broken Edges
+
+- A `references`/`affects`/`depends_on` target that is not a doc ID.
+- An `implements` target that is not a known flow ID.
+- A `code_paths` / `test_paths` glob that matches nothing in the tree.
+
+### Reverse-Edge Drift
+
+If a doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`),
+that is an error. Reverse edges are derived, never authored.
+
+### Flow Integrity
+
+- A flow that references a nonexistent domain.
+- An orphaned high-level flow (declared in the global map but implemented by no doc).
+- A flow with no `code_paths` reachable through its implementers.
+
+### Duplicate Semantic Source
+
+Two docs whose `code_paths` fully overlap and whose `domains` and `flows` match are a
+possible single-source-of-truth violation. Report as a warning.
+
+These checks require **no LLM**. They are deterministic.
+
+Add to the report shape:
+
+```text
+GRAPH
+  - ERROR: <doc>: <edge> -> <missing id>
+  - ERROR: <doc>: authors reverse edge <edge>
+  - ERROR: <flow>: references nonexistent domain <domain>
+  - WARN: <flow>: orphaned (no implementer)
+  - WARN: <doc A> and <doc B>: duplicate semantic source
+```
