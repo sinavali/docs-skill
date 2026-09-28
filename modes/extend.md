@@ -174,27 +174,3 @@ When adding a routing index, use `templates/index.md`.
 When adding the global map, use `templates/index-global.md`.
 
 ---
-
-## Impact Metadata Is Mandatory on New Docs
-
-Every doc created by `extend` MUST carry the impact metadata fields defined in
-`rules/frontmatter.md`:
-
-- `domains`
-- `flows`
-- `keywords`
-- `references` (when it depends on another doc)
-- `affects` (when a change here cascades)
-- `implements` (flow docs and contracts)
-- `code_paths` (when it governs code)
-- `test_paths` (when tests verify it)
-
-A new doc without `code_paths` (when it governs code) is incomplete. The generator
-cannot bridge docs to code without it.
-
-**MUST NOT** author reverse edges. `affected_by`, `referenced_by`, `implemented_by`
-are derived.
-
-When adding a flow doc, use `templates/flow.md`.
-When adding a routing index, use `templates/index.md`.
-When adding the global map, use `templates/index-global.md`.

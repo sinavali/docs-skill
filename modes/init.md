@@ -120,20 +120,3 @@ After scaffolding, run the generator (if `tools/docs-map` is present) to create
 `.qwen/docs-index/`.
 
 ---
-
-## Impact-Layer Scaffolding (v2)
-
-In addition to the classic tree, `init` creates the impact layer:
-
-- **`docs/INDEX.md`** — the global map. Render from `templates/index-global.md`.
-  Lists domains, flows, and cross-domain participation. Stays tiny.
-- **`docs/007-flows/`** — cross-domain flow docs. Each flow gets a directory with
-  an `INDEX.md` and section files rendered from `templates/flow.md`.
-- **`AGENT.md`** — MUST include the Mandatory Impact Workflow section.
-
-Every generated doc MUST carry the impact metadata fields from
-`rules/frontmatter.md`: `domains`, `flows`, `keywords`, and `code_paths` where it
-governs code.
-
-After scaffolding, run the generator (if `tools/docs-map` is present) to create
-`.qwen/docs-index/`.
