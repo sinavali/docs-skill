@@ -1,0 +1,7 @@
+# Generated documentation graph (derived from Markdown frontmatter)
+.qwen/docs-index/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp

@@ -50,6 +50,24 @@ For any non-trivial code change, this repository requires the following sequence
 3. Follow documentation relationships until the impact surface is closed.
 4. Resolve affected `code_paths` and `test_paths`.
 5. Produce a **Change Surface** (`templates/change-surface.md`).
+
+Use the `docs-map` tool when available (see `USAGE.md`):
+
+```bash
+docs-map generate                  # rebuild .qwen/docs-index/
+docs-map impact "<request>"        # seed, expand, resolve code + tests
+```
+
+The `/change` command runs this workflow end to end.
+
+Use the `docs-map` tool when available (see `USAGE.md`):
+
+```bash
+docs-map generate                  # rebuild .qwen/docs-index/
+docs-map impact "<request>"        # seed, expand, resolve code + tests
+```
+
+The `/change` command runs this workflow end to end.
 6. Do not implement before the Change Surface is complete.
 7. The reviewer MUST verify coverage against the Change Surface.
 

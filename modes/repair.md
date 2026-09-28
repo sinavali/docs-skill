@@ -24,9 +24,15 @@ requires_access: write, org-level
 - `rules/nc.md`
 - `rules/file-level.md`
 - `rules/excluded-paths.md`
+- `rules/relationships.md`
+- `rules/impact.md`
+- `rules/index-format.md`
+- `rules/graph.md`
 - `templates/agent.md`
 - `templates/index.md`
+- `templates/index-global.md`
 - `templates/section.md`
+- `templates/flow.md`
 - `templates/nc-item.md`
 
 ---
@@ -49,6 +55,12 @@ requires_access: write, org-level
    - Frontmatter follows `rules/frontmatter.md`?
    - `AGENT.md` exists at each anchor boundary?
    - Every loadable unit is under the threshold per `rules/sectioning.md`?
+   - Every doc carries the impact metadata per `rules/frontmatter.md` (`domains`, `flows`, `keywords`, and `code_paths` / `test_paths` where it governs code)?
+   - Every edge (`references`, `affects`, `implements`, `depends_on`) resolves to an existing ID?
+   - No doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`)?
+   - Every doc carries the impact metadata per `rules/frontmatter.md` (`domains`, `flows`, `keywords`, and `code_paths` / `test_paths` where it governs code)?
+   - Every edge (`references`, `affects`, `implements`, `depends_on`) resolves to an existing ID?
+   - No doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`)?
 4. **Create missing `INDEX.md` files.** For a directory with content but no `INDEX.md`, generate one from `templates/index.md` and list its sections.
 5. **Move content into canonical locations.** Move unclassified docs into the correct type directory. Rename to canonical numbering. Never delete content.
 6. **Rename files** to canonical naming per `rules/numbering.md`. Update references.
