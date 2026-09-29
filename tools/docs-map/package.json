@@ -5,5 +5,6 @@
   "description": "Generate and query the docs-skill documentation graph.",
   "bin": { "docs-map": "index.js" },
   "main": "index.js",
+  "scripts": { "test": "node --test" },
   "license": "MIT"
 }
