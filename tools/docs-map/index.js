@@ -43,10 +43,15 @@ function walk(dir, acc) {
 
 // Minimal, dependency-free frontmatter parser (top-level scalars + inline lists).
 function parseFrontmatter(text) {
-  if (!text.startsWith('---')) return {};
-  const end = text.indexOf('\n---', 3);
+  // Normalise line endings before parsing. `.` does not match `\r`, so on a
+  // CRLF document the final line of the block (which keeps its `\r` — there is
+  // no following `\n` to consume it) fails to match and its entry is silently
+  // dropped. Lone `\r` documents would not be recognised at all.
+  const src = text.replace(/\r\n?/g, '\n');
+  if (!src.startsWith('---')) return {};
+  const end = src.indexOf('\n---', 3);
   if (end === -1) return {};
-  const fm = text.slice(3, end).split(/\r?\n/);
+  const fm = src.slice(3, end).split('\n');
   const out = {};
   let key = null;
   for (let line of fm) {

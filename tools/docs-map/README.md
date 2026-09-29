@@ -41,6 +41,16 @@ node tools/docs-map/index.js --root /path/to/repo generate
 | `impact "<request>"` | Seeds from a request, expands the graph, resolves code + tests. |
 | `validate` | Deterministic graph-integrity check. Exits non-zero on error. |
 
+## Tests
+
+```bash
+npm test
+```
+
+Runs `node --test` over `index.test.js` using Node's built-in test runner (no
+dependencies). The suite covers frontmatter parsing across LF, CRLF, and lone
+`CR` line endings.
+
 ## Source of truth
 
 Markdown frontmatter. The generated JSON under `.qwen/docs-index/` is a derived
