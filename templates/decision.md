@@ -11,6 +11,7 @@ flows: [{{FLOWS}}]
 keywords: [{{KEYWORDS}}]
 references: [{{REFERENCES}}]
 affects: [{{AFFECTS}}]
+depends_on: [{{DEPENDS_ON}}]
 ---
 
 # {{TITLE}}

@@ -292,3 +292,99 @@ title: Alpha Doc
     cleanup(root);
   }
 });
+
+test('parseFrontmatter: strips unquoted inline comments cleanly', () => {
+  const root = createRepo({
+    'a.md': `---
+id: doc/a # the primary doc
+title: Doc A # title comment
+keywords:
+  - auth # authentication
+references: [doc/b # inline ref]
+---
+# A`,
+    'b.md': `---
+id: doc/b
+---
+# B`,
+  });
+  try {
+    const res = runCli(root, ['doc', 'doc/a']);
+    assert.equal(res.status, 0);
+    const parsed = JSON.parse(res.stdout);
+    assert.equal(parsed.id, 'doc/a');
+    assert.equal(parsed.title, 'Doc A');
+    assert.deepEqual(parsed.keywords, ['auth']);
+    assert.deepEqual(parsed.references, ['doc/b']);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test('flow: resolves interchangeably with or without flow: prefix', () => {
+  const root = createRepo({
+    'reg.md': `---
+id: auth/registration
+implements: [flow:registration]
+---
+# Reg`,
+  });
+  try {
+    const resWithout = runCli(root, ['flow', 'registration']);
+    assert.equal(resWithout.status, 0);
+    assert.match(resWithout.stdout, /auth\/registration/);
+
+    const resWith = runCli(root, ['flow', 'flow:registration']);
+    assert.equal(resWith.status, 0);
+    assert.match(resWith.stdout, /auth\/registration/);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test('impact: expands implementers when seed is a flow document', () => {
+  const root = createRepo({
+    '007-flows/reg.md': `---
+id: flow:registration
+title: Registration Flow
+flows: [registration]
+---
+# Flow`,
+    'auth/reg.md': `---
+id: auth/registration
+implements: [flow:registration]
+code_paths: [packages/auth/**]
+---
+# Auth Reg`,
+  });
+  try {
+    const res = runCli(root, ['impact', 'registration']);
+    assert.equal(res.status, 0);
+    assert.match(res.stdout, /auth\/registration/);
+    assert.match(res.stdout, /packages\/auth\/\*\*/);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test('code: matches paths with ./ prefix and matches test_paths', () => {
+  const root = createRepo({
+    'doc.md': `---
+id: doc/auth
+code_paths: [packages/auth/src/**]
+test_paths: [packages/auth/test/**]
+---
+# Auth`,
+  });
+  try {
+    const resDotSlash = runCli(root, ['code', './packages/auth/src/index.ts']);
+    assert.equal(resDotSlash.status, 0);
+    assert.match(resDotSlash.stdout, /doc\/auth/);
+
+    const resTest = runCli(root, ['code', 'packages/auth/test/unit.test.ts']);
+    assert.equal(resTest.status, 0);
+    assert.match(resTest.stdout, /doc\/auth/);
+  } finally {
+    cleanup(root);
+  }
+});

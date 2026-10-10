@@ -49,7 +49,7 @@ B: { affected_by: [A] }
 
 Author only `A.affects: [B]`. The generated graph derives `B.affected_by: [A]`.
 
-Same for `references` / `referenced_by`, and `implements` / `implemented_by`.
+Same for `references` / `referenced_by`, `depends_on` / `depended_on_by`, and `implements` / `implemented_by`.
 
 This is a hard rule. Authoring reverse edges guarantees drift.
 

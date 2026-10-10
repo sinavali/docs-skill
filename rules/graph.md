@@ -33,7 +33,7 @@ change. If they disagree with the Markdown, the Markdown wins.
 ## Reverse Edges Are Derived Here
 
 The generator is the only place reverse edges (`referenced_by`, `affected_by`,
-`implemented_by`) ever exist. They are never written into Markdown.
+`depended_on_by`, `implemented_by`) ever exist. They are never written into Markdown.
 
 ## The `docs-map` Tool
 

@@ -83,6 +83,12 @@ function parseFrontmatter(text) {
 
 function strip(s) {
   s = s.trim();
+  if (!s.startsWith('"') && !s.startsWith("'")) {
+    const commentIdx = s.indexOf(' #');
+    if (commentIdx !== -1) {
+      s = s.slice(0, commentIdx).trim();
+    }
+  }
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     return s.slice(1, -1);
   }
@@ -150,8 +156,13 @@ function load() {
   for (const d of Object.values(docs)) {
     for (const t of d.references) push(rel.references, t, d.id);
     for (const t of d.affects) push(rel.affects, t, d.id);
-    for (const t of d.implements) push(rel.implements, t, d.id);
     for (const t of d.depends_on) push(rel.depends_on, t, d.id);
+    for (const t of d.implements) {
+      push(rel.implements, t, d.id);
+      const cleanT = t.replace(/^flow:/, '');
+      if (cleanT !== t) push(rel.implements, cleanT, d.id);
+      else push(rel.implements, 'flow:' + cleanT, d.id);
+    }
   }
   return { docs, rel, missingIds, reverseEdgeViolations };
 }
@@ -260,7 +271,10 @@ function generate() {
       depends_on: d.depends_on,
       referenced_by: model.rel.references[id] || [],
       affected_by: model.rel.affects[id] || [],
-      implemented_by: model.rel.implements[id] || [],
+      implemented_by: [
+        ...(model.rel.implements[id] || []),
+        ...(model.rel.implements['flow:' + id] || []),
+      ],
       depended_on_by: model.rel.depends_on[id] || [],
     };
   }
@@ -279,12 +293,18 @@ switch (cmd) {
   case 'generate': generate(); break;
   case 'search': printMatches(arg); break;
   case 'flow': {
-    const impl = model.rel.implements[arg] || [];
+    const cleanFlow = arg ? arg.replace(/^flow:/, '') : '';
+    const impl = [
+      ...(model.rel.implements[arg] || []),
+      ...(model.rel.implements[cleanFlow] || []),
+      ...(model.rel.implements['flow:' + cleanFlow] || [])
+    ];
+    const uniqueImpl = [...new Set(impl)];
     console.log('FLOW ' + arg);
     console.log('IMPLEMENTED_BY');
-    if (!impl.length) console.log('  (none)');
-    for (const i of impl) console.log('  ' + i);
-    const { code, tests } = codeAndTests(impl);
+    if (!uniqueImpl.length) console.log('  (none)');
+    for (const i of uniqueImpl) console.log('  ' + i);
+    const { code, tests } = codeAndTests(uniqueImpl);
     console.log('CODE'); [...code].forEach((c) => console.log('  ' + c));
     console.log('TESTS'); [...tests].forEach((t) => console.log('  ' + t));
     break;
@@ -319,8 +339,10 @@ switch (cmd) {
       console.log('  (no path specified)');
       break;
     }
+    const cleanArg = arg.replace(/^\.\//, '').replace(/^\//, '');
     for (const d of Object.values(model.docs)) {
-      if (d.code_paths.some((c) => arg.startsWith(c.replace(/\/\*\*$/, '')) || c.includes(arg))) {
+      const allPaths = [...d.code_paths, ...d.test_paths];
+      if (allPaths.some((c) => cleanArg.startsWith(c.replace(/\/\*\*$/, '')) || c.includes(cleanArg))) {
         console.log('  ' + d.id);
       }
     }
@@ -343,9 +365,27 @@ switch (cmd) {
         // Flow implements: expand upward to flow, and outward to sibling implementers
         for (const f of d.implements) {
           if (!frontier.has(f) && model.docs[f]) { frontier.add(f); grew = true; }
-          const siblings = model.rel.implements[f] || [];
+          const cleanF = f.replace(/^flow:/, '');
+          const siblings = [
+            ...(model.rel.implements[f] || []),
+            ...(model.rel.implements[cleanF] || []),
+            ...(model.rel.implements['flow:' + cleanF] || [])
+          ];
           for (const s of siblings) {
             if (!frontier.has(s) && model.docs[s]) { frontier.add(s); grew = true; }
+          }
+        }
+        // If d is itself a flow doc or lists flows in d.flows, expand its implementers
+        const relatedFlows = [
+          id,
+          id.replace(/^flow:/, ''),
+          ...(d.flows || []),
+          ...(d.flows || []).map((fl) => 'flow:' + fl)
+        ];
+        for (const fl of relatedFlows) {
+          const impls = model.rel.implements[fl] || [];
+          for (const imp of impls) {
+            if (!frontier.has(imp) && model.docs[imp]) { frontier.add(imp); grew = true; }
           }
         }
         // Reverse edges: affected_by, depended_on_by
