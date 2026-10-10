@@ -38,7 +38,7 @@ included_paths:
 ## Notes
 
 - `.github/` is **not** excluded by default. CI and workflow files remain in scope unless explicitly excluded.
-- New tool directories discovered at runtime MUST be reported to the human via `NEED_CLEARIFICATION` so the exclusion list can be updated.
+- New tool directories discovered at runtime MUST be reported to the human via `NEED_CLARIFICATION` so the exclusion list can be updated.
 - `included_paths` overrides `excluded_paths` for exact subtrees. It does not override a parent exclusion for a sibling path.
 
 ## Agent Behavior

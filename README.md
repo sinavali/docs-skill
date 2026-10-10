@@ -84,7 +84,7 @@ Reverse edges (`affected_by`, `referenced_by`, `implemented_by`) are **derived, 
 - **Docs lead, code follows.**
 - **Two audiences, two files:** `README.md` for humans, `AGENT.md` for agents.
 - **Breadth of metadata, narrowness of content.**
-- **Ambiguity is recorded, not invented.** Every gap becomes a `NEED_CLEARIFICATION` item.
+- **Ambiguity is recorded, not invented.** Every gap becomes a `NEED_CLARIFICATION` item.
 - **No versions, no status, no changelog.** VCS is the version store.
 - **Impact before implementation.** No non-trivial change without a Change Surface.
 

@@ -45,7 +45,7 @@ requires_access: read
    - **Index membership.** Every section file is listed in its parent `INDEX.md`. Every `INDEX.md` is reachable from a higher `INDEX.md` (up to org-root).
    - **References.** Every `references` entry resolves to an existing doc ID.
    - **Numbering.** Filenames follow `rules/numbering.md`. No sibling collisions.
-   - **Placement.** No doc sits outside `/docs/` except the three root files (`README.md`, `AGENT.md`, `NEED_CLEARIFICATION.md`) and file-level `<filename>.md` siblings.
+   - **Placement.** No doc sits outside `/docs/` except the three root files (`README.md`, `AGENT.md`, `NEED_CLARIFICATION.md`) and file-level `<filename>.md` siblings.
    - **Size.** Line count and word count of every loadable unit (top-level doc, `INDEX.md`, section file). Report units above the soft threshold as warnings and above the hard threshold as errors. See `rules/sectioning.md`.
 4. **For each `AGENT.md`, check:**
    - Frontmatter per `rules/frontmatter.md`.
@@ -54,7 +54,7 @@ requires_access: read
    - Index protocol stated.
    - File-level-doc rule stated.
    - Excluded paths declared.
-5. **For each `NEED_CLEARIFICATION.md`, check:**
+5. **For each `NEED_CLARIFICATION.md`, check:**
    - Item schema per `rules/nc.md`.
    - Item IDs unique within the file.
    - Promotion targets exist as doc paths.

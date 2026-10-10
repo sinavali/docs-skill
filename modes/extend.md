@@ -12,7 +12,7 @@ requires_access: write
 **Inputs:**
 - `anchor_path` — the directory where the addition lands.
 - `target` — the target type directory or parent doc.
-- `kind` — one of `section`, `decision`, `contract`, `cross-cutting`, `runbook`, `index`, `agent`.
+- `kind` — one of `blueprint`, `decision`, `contract`, `cross-cutting`, `operational`, `agent` (sections inherit their parent doc's kind).
 - `spec` — the content spec for the new file(s).
 
 **Outputs:**

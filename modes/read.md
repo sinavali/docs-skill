@@ -70,7 +70,7 @@ requires_access: read
 - **MUST** prefer sectioned docs over monolithic docs when both exist for the same subject.
 - **MUST** apply precedence on conflict rather than picking silently.
 - **MUST** respect open NC items as provisional intent, subordinate to active docs.
-- **MUST NOT** write anything to disk in `read` mode except a `NEED_CLEARIFICATION.md` item when a required doc is missing or ambiguous.
+- **MUST NOT** write anything to disk in `read` mode except a `NEED_CLARIFICATION.md` item when a required doc is missing or ambiguous.
 
 ---
 

@@ -11,7 +11,7 @@ purpose: 3-digit accumulation, gaps, insertion, and stable doc IDs.
 {{3-digit-id}}-{{kebab-case-title}}/
 ```
 
-Examples: `001-agent/`, `002-blueprint/`, `003-decisions/`, `005-cross-cutting/`.
+Examples: `001-agent/`, `002-blueprint/`, `003-decisions/`, `005-cross-cutting/`, `007-flows/`.
 
 ## File Naming
 

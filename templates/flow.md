@@ -2,11 +2,11 @@
 id: {{ID}}
 title: {{TITLE}}
 level: {{LEVEL}}
-kind: contract
+kind: blueprint
 domains: [{{DOMAINS}}]
-flows: [{{FLOW}}]
+flows: [{{FLOWS}}]
 keywords: [{{KEYWORDS}}]
-implements: [{{FLOW_ID}}]
+references: [{{REFERENCES}}]
 code_paths: [{{CODE_PATHS}}]
 test_paths: [{{TEST_PATHS}}]
 ---
