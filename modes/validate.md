@@ -33,6 +33,8 @@ requires_access: read
 - `rules/nc.md`
 - `rules/file-level.md`
 - `rules/excluded-paths.md`
+- `rules/relationships.md`
+- `rules/graph.md`
 
 ---
 

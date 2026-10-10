@@ -22,7 +22,9 @@ requires_access: write, org-level
 **References:**
 - `templates/agent.md`
 - `templates/index.md`
+- `templates/index-global.md`
 - `templates/section.md`
+- `templates/flow.md`
 - `rules/frontmatter.md`
 - `rules/numbering.md`
 

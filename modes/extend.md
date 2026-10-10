@@ -33,6 +33,8 @@ requires_access: write
 - `templates/cross-cutting.md`
 - `templates/runbook.md`
 - `templates/index.md`
+- `templates/index-global.md`
+- `templates/flow.md`
 - `templates/agent.md`
 
 ---

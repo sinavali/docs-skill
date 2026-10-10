@@ -10,6 +10,7 @@ flows: [{{FLOWS}}]
 keywords: [{{KEYWORDS}}]
 references: [{{REFERENCES}}]
 affects: [{{AFFECTS}}]
+depends_on: [{{DEPENDS_ON}}]
 code_paths: [{{CODE_PATHS}}]
 test_paths: [{{TEST_PATHS}}]
 ---
