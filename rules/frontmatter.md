@@ -48,6 +48,7 @@ An `INDEX.md` inherits the `kind` of the directory it indexes.
 | `004-contracts/` | `contract` |
 | `005-cross-cutting/` | `cross-cutting` |
 | `006-operational/` | `operational` |
+| `007-flows/` | `blueprint` |
 
 The `kind` of an `INDEX.md` MUST NOT be `index`. `index` is a reserved filename, not a `kind` value. The `INDEX.md` of a sectioned doc that was previously a single-file doc inherits the `kind` of that doc (e.g., a sectioned refund contract keeps `kind: contract`).
 

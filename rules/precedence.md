@@ -24,7 +24,7 @@ A doc at a higher level wins over a doc at a lower level. A decision doc wins ov
 If two docs at the same level conflict:
 
 1. **Stop the task.**
-2. **Create a `NEED_CLEARIFICATION` item** naming both docs.
+2. **Create a `NEED_CLARIFICATION` item** naming both docs.
 3. **Do not pick one silently.**
 
 ## No Version Ties

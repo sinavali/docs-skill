@@ -22,9 +22,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = process.argv.includes('--root')
-  ? process.argv[process.argv.indexOf('--root') + 1]
-  : process.cwd();
+let rootArg = process.cwd();
+for (let i = 0; i < process.argv.length; i++) {
+  const a = process.argv[i];
+  if (a === '--root' && i + 1 < process.argv.length) {
+    rootArg = process.argv[i + 1];
+  } else if (a.startsWith('--root=')) {
+    rootArg = a.slice('--root='.length);
+  }
+}
+
+const ROOT = path.resolve(rootArg);
 const DOCS = path.join(ROOT, 'docs');
 const OUT = path.join(ROOT, '.qwen', 'docs-index');
 const EXCLUDE = ['node_modules', '.git', 'dist', 'build', '.cache', 'coverage'];
@@ -43,11 +51,7 @@ function walk(dir, acc) {
 
 // Minimal, dependency-free frontmatter parser (top-level scalars + inline lists).
 function parseFrontmatter(text) {
-  // Normalise line endings before parsing. `.` does not match `\r`, so on a
-  // CRLF document the final line of the block (which keeps its `\r` — there is
-  // no following `\n` to consume it) fails to match and its entry is silently
-  // dropped. Lone `\r` documents would not be recognised at all.
-  const src = text.replace(/\r\n?/g, '\n');
+  const src = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   if (!src.startsWith('---')) return {};
   const end = src.indexOf('\n---', 3);
   if (end === -1) return {};
@@ -55,13 +59,13 @@ function parseFrontmatter(text) {
   const out = {};
   let key = null;
   for (let line of fm) {
-    if (!line.trim()) continue;
+    if (!line.trim() || line.trim().startsWith('#')) continue;
     const listItem = line.match(/^\s+-\s+(.*)$/);
     if (listItem && key) {
       out[key].push(strip(listItem[1]));
       continue;
     }
-    const kv = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    const kv = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (!kv) continue;
     key = kv[1];
     const val = kv[2].trim();
@@ -76,6 +80,7 @@ function parseFrontmatter(text) {
   }
   return out;
 }
+
 function strip(s) {
   s = s.trim();
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
@@ -83,6 +88,7 @@ function strip(s) {
   }
   return s;
 }
+
 function asArray(v) {
   if (v === undefined || v === null) return [];
   return Array.isArray(v) ? v : [v];
@@ -91,13 +97,35 @@ function asArray(v) {
 // ---------- model ----------
 function load() {
   const files = walk(DOCS, []);
+  const rootCandidates = ['AGENT.md', 'NEED_CLARIFICATION.md', 'NEED_CLEARIFICATION.md'];
+  for (const rc of rootCandidates) {
+    const rp = path.join(ROOT, rc);
+    if (fs.existsSync(rp) && !files.includes(rp)) files.push(rp);
+  }
+
   const docs = {};
+  const missingIds = [];
+  const reverseEdgeViolations = [];
+  const FORBIDDEN_REVERSE_EDGES = ['affected_by', 'referenced_by', 'implemented_by', 'depended_on_by'];
+
   for (const f of files) {
     let text = '';
     try { text = fs.readFileSync(f, 'utf8'); } catch { continue; }
     const fm = parseFrontmatter(text);
     const id = fm.id;
-    if (!id) continue;
+    if (!id) {
+      if (f.startsWith(DOCS)) {
+        missingIds.push(path.relative(ROOT, f).split(path.sep).join('/'));
+      }
+      continue;
+    }
+
+    for (const rev of FORBIDDEN_REVERSE_EDGES) {
+      if (fm[rev] !== undefined) {
+        reverseEdgeViolations.push({ id, field: rev, file: f });
+      }
+    }
+
     docs[id] = {
       id,
       path: path.relative(ROOT, f).split(path.sep).join('/'),
@@ -116,19 +144,21 @@ function load() {
       file: fm.file || undefined,
     };
   }
+
   // derived reverse edges
-  const rel = { references: {}, affects: {}, implements: {} };
+  const rel = { references: {}, affects: {}, implements: {}, depends_on: {} };
   for (const d of Object.values(docs)) {
     for (const t of d.references) push(rel.references, t, d.id);
     for (const t of d.affects) push(rel.affects, t, d.id);
     for (const t of d.implements) push(rel.implements, t, d.id);
+    for (const t of d.depends_on) push(rel.depends_on, t, d.id);
   }
-  return { docs, rel };
+  return { docs, rel, missingIds, reverseEdgeViolations };
 }
+
 function push(obj, k, v) { (obj[k] = obj[k] || []).push(v); }
 
 // ---------- commands ----------
-// positional args = process.argv minus flags and their values
 const rawArgs = process.argv.slice(2);
 const positional = [];
 for (let i = 0; i < rawArgs.length; i++) {
@@ -136,40 +166,43 @@ for (let i = 0; i < rawArgs.length; i++) {
   if (rawArgs[i].startsWith('--')) continue;
   positional.push(rawArgs[i]);
 }
+
 const cmd = positional[0];
 const arg = positional[1];
-const model = load();
 
-function generate() {
-  fs.mkdirSync(OUT, { recursive: true });
-  const manifest = {};
-  for (const d of Object.values(model.docs)) manifest[d.id] = d;
-  const relations = {};
-  for (const id of Object.keys(model.docs)) {
-    const d = model.docs[id];
-    relations[id] = {
-      references: d.references,
-      affects: d.affects,
-      implements: d.implements,
-      depends_on: d.depends_on,
-      referenced_by: model.rel.references[id] || [],
-      affected_by: model.rel.affects[id] || [],
-      implemented_by: model.rel.implements[id] || [],
-    };
-  }
-  fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
-  fs.writeFileSync(path.join(OUT, 'relations.json'), JSON.stringify(relations, null, 2));
-  console.log('wrote ' + path.join('.qwen', 'docs-index', 'manifest.json'));
-  console.log('wrote ' + path.join('.qwen', 'docs-index', 'relations.json'));
-  console.log('docs: ' + Object.keys(manifest).length);
-}
+const STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+  'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
+  'will', 'with', 'change', 'update', 'modify', 'make', 'so', 'after', 'instead',
+  'should', 'do', 'does', 'did', 'or', 'than'
+]);
 
 function match(q) {
-  q = (q || '').toLowerCase();
+  if (!q) return [];
+  const rawQ = q.trim().toLowerCase();
+  const tokens = rawQ.split(/[^a-z0-9_-]+/).filter((t) => t.length > 1 && !STOP_WORDS.has(t));
+
   const hits = [];
   for (const d of Object.values(model.docs)) {
     const hay = [d.id, d.title, ...d.keywords, ...d.domains, ...d.flows].join(' ').toLowerCase();
-    if (hay.includes(q)) hits.push(d.id);
+    if (hay.includes(rawQ)) {
+      hits.push(d.id);
+      continue;
+    }
+    if (tokens.length > 0) {
+      let matched = false;
+      for (const t of tokens) {
+        if (d.keywords.some((k) => k.toLowerCase().includes(t)) ||
+            d.domains.some((dm) => dm.toLowerCase().includes(t)) ||
+            d.flows.some((f) => f.toLowerCase().includes(t)) ||
+            d.id.toLowerCase().includes(t) ||
+            d.title.toLowerCase().includes(t)) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) hits.push(d.id);
+    }
   }
   return hits;
 }
@@ -201,15 +234,46 @@ function printRelations(ids) {
     if (r) {
       r.affects.forEach((e) => edges.add(e));
       r.references.forEach((e) => edges.add(e));
+      r.depends_on.forEach((e) => edges.add(e));
       r.implements.forEach((e) => edges.add(e));
     }
     (model.rel.affects[id] || []).forEach((e) => edges.add(e));
     (model.rel.references[id] || []).forEach((e) => edges.add(e));
+    (model.rel.depends_on[id] || []).forEach((e) => edges.add(e));
     console.log('  ' + id);
     if (!edges.size) console.log('    (no edges)');
     for (const e of edges) console.log('    -> ' + e);
   }
 }
+
+function generate() {
+  fs.mkdirSync(OUT, { recursive: true });
+  const manifest = {};
+  for (const d of Object.values(model.docs)) manifest[d.id] = d;
+  const relations = {};
+  for (const id of Object.keys(model.docs)) {
+    const d = model.docs[id];
+    relations[id] = {
+      references: d.references,
+      affects: d.affects,
+      implements: d.implements,
+      depends_on: d.depends_on,
+      referenced_by: model.rel.references[id] || [],
+      affected_by: model.rel.affects[id] || [],
+      implemented_by: model.rel.implements[id] || [],
+      depended_on_by: model.rel.depends_on[id] || [],
+    };
+  }
+  fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(path.join(OUT, 'relations.json'), JSON.stringify(relations, null, 2));
+  console.log('wrote ' + path.join('.qwen', 'docs-index', 'manifest.json'));
+  console.log('wrote ' + path.join('.qwen', 'docs-index', 'relations.json'));
+  console.log('docs: ' + Object.keys(manifest).length);
+}
+
+const model = (cmd && ['generate', 'search', 'flow', 'doc', 'related', 'code', 'impact', 'validate'].includes(cmd))
+  ? load()
+  : null;
 
 switch (cmd) {
   case 'generate': generate(); break;
@@ -232,12 +296,29 @@ switch (cmd) {
     break;
   }
   case 'related': {
-    const ids = [arg, ...(model.rel.affects[arg] || []), ...(model.rel.references[arg] || [])];
+    if (!arg) {
+      console.log('RELATIONS');
+      console.log('  (no id specified)');
+      break;
+    }
+    const d = model.docs[arg];
+    const forward = d ? [...d.affects, ...d.references, ...d.depends_on, ...d.implements] : [];
+    const reverse = [
+      ...(model.rel.affects[arg] || []),
+      ...(model.rel.references[arg] || []),
+      ...(model.rel.depends_on[arg] || []),
+      ...(model.rel.implements[arg] || []),
+    ];
+    const ids = [arg, ...forward, ...reverse];
     printRelations([...new Set(ids)]);
     break;
   }
   case 'code': {
     console.log('DOCS');
+    if (!arg) {
+      console.log('  (no path specified)');
+      break;
+    }
     for (const d of Object.values(model.docs)) {
       if (d.code_paths.some((c) => arg.startsWith(c.replace(/\/\*\*$/, '')) || c.includes(arg))) {
         console.log('  ' + d.id);
@@ -255,10 +336,20 @@ switch (cmd) {
       for (const id of [...frontier]) {
         const d = model.docs[id];
         if (!d) continue;
-        for (const e of [...d.affects, ...d.references, ...d.implements]) {
+        // Forward: affects, references, depends_on
+        for (const e of [...d.affects, ...d.references, ...d.depends_on]) {
           if (!frontier.has(e) && model.docs[e]) { frontier.add(e); grew = true; }
         }
-        for (const e of [...(model.rel.affects[id] || [])]) {
+        // Flow implements: expand upward to flow, and outward to sibling implementers
+        for (const f of d.implements) {
+          if (!frontier.has(f) && model.docs[f]) { frontier.add(f); grew = true; }
+          const siblings = model.rel.implements[f] || [];
+          for (const s of siblings) {
+            if (!frontier.has(s) && model.docs[s]) { frontier.add(s); grew = true; }
+          }
+        }
+        // Reverse edges: affected_by, depended_on_by
+        for (const e of [...(model.rel.affects[id] || []), ...(model.rel.depends_on[id] || [])]) {
           if (!frontier.has(e) && model.docs[e]) { frontier.add(e); grew = true; }
         }
       }
@@ -272,6 +363,14 @@ switch (cmd) {
   }
   case 'validate': {
     let errors = 0;
+    for (const file of model.missingIds) {
+      console.log('ERROR missing id: ' + file);
+      errors++;
+    }
+    for (const v of model.reverseEdgeViolations) {
+      console.log('ERROR reverse-edge drift: ' + v.id + ' authors ' + v.field);
+      errors++;
+    }
     for (const d of Object.values(model.docs)) {
       for (const e of d.references) if (!model.docs[e]) { console.log('ERROR broken references: ' + d.id + ' -> ' + e); errors++; }
       for (const e of d.affects) if (!model.docs[e]) { console.log('ERROR broken affects: ' + d.id + ' -> ' + e); errors++; }

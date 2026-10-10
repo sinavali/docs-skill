@@ -28,8 +28,8 @@ test_paths: [{{TEST_PATHS}}]
 {{SCHEMAS}}
 
 ## Compatibility
-- Additive changes only in minor revisions.
-- Breaking changes require a new contract version and a decision doc.
+- Prefer backward-compatible, additive changes.
+- Breaking changes require a corresponding decision doc and impact analysis.
 
 ## Change Policy
 Changes to this contract MUST originate at the level at which it lives.

@@ -48,8 +48,9 @@ npm test
 ```
 
 Runs `node --test` over `index.test.js` using Node's built-in test runner (no
-dependencies). The suite covers frontmatter parsing across LF, CRLF, and lone
-`CR` line endings.
+dependencies). The suite covers frontmatter parsing across line endings, full
+CLI commands, tokenized impact matching, `depends_on` relationships, error
+guards, and validation.
 
 ## Source of truth
 

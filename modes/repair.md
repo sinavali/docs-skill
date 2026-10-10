@@ -43,7 +43,7 @@ requires_access: write, org-level
    - If a VCS is present, create a branch named `docs/repair-YYYY-MM-DD`. If the caller's VCS does not support branches, proceed on the current branch only with explicit caller opt-in.
    - If no VCS is present, require explicit caller opt-in before any write.
 2. **Inventory.** Walk `root_path`, respecting `excluded_paths`. Classify every `.md` file as one of:
-   - a root file (`README.md`, `AGENT.md`, `NEED_CLEARIFICATION.md`),
+   - a root file (`README.md`, `AGENT.md`, `NEED_CLARIFICATION.md`),
    - a doc under `/docs/`,
    - a file-level doc (`<filename>.md` next to a source file),
    - unclassified.
@@ -55,9 +55,6 @@ requires_access: write, org-level
    - Frontmatter follows `rules/frontmatter.md`?
    - `AGENT.md` exists at each anchor boundary?
    - Every loadable unit is under the threshold per `rules/sectioning.md`?
-   - Every doc carries the impact metadata per `rules/frontmatter.md` (`domains`, `flows`, `keywords`, and `code_paths` / `test_paths` where it governs code)?
-   - Every edge (`references`, `affects`, `implements`, `depends_on`) resolves to an existing ID?
-   - No doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`)?
    - Every doc carries the impact metadata per `rules/frontmatter.md` (`domains`, `flows`, `keywords`, and `code_paths` / `test_paths` where it governs code)?
    - Every edge (`references`, `affects`, `implements`, `depends_on`) resolves to an existing ID?
    - No doc authors a reverse edge (`affected_by`, `referenced_by`, `implemented_by`)?
@@ -74,7 +71,7 @@ requires_access: write, org-level
    - Do not slice by byte count; split at concern boundaries.
 9. **Merge undersized siblings.** For any pair of sibling sections that are both under ~20 lines and share a concern, apply the merge procedure in `rules/sectioning.md`. Do not merge across concerns.
 10. **Add `AGENT.md`** at each anchor boundary. If an anchor boundary is unclear, create an NC item and leave the tree unrepaired for that subtree.
-11. **Add `NEED_CLEARIFICATION` items** for anything unresolved:
+11. **Add `NEED_CLARIFICATION` items** for anything unresolved:
     - content that could not be classified,
     - anchors whose boundary is ambiguous,
     - docs whose frontmatter could not be inferred,
@@ -142,7 +139,7 @@ SUMMARY
 - **MUST** section recursively per `rules/sectioning.md`. No loadable unit may remain above the hard threshold.
 - **MUST** section semantically, not by byte count or heading depth.
 - **MUST** preserve doc IDs where the doc's scope is unchanged. A conversion does not change the doc's ID.
-- **MUST** create `NEED_CLEARIFICATION.md` items for anything unresolved rather than guessing.
+- **MUST** create `NEED_CLARIFICATION.md` items for anything unresolved rather than guessing.
 
 ---
 

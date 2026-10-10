@@ -42,7 +42,7 @@ requires_access: write, org-level
    - `is_org_root: true` for monorepo / monolithic / superrepo.
    - For a standalone repo, set `org_root` to `../../org-root` and set `requires_org_docs: true` and `org_docs_fallback: notify` if an org-root is expected.
    - Default `excluded_paths`.
-6. **Create `/docs/INDEX.md`** from `templates/index.md`.
+6. **Create `/docs/INDEX.md`** (the global map) from `templates/index-global.md`.
 7. **Create `/docs/001-agent/`** with sections extracted from `AGENT.md` if `AGENT.md` exceeds 150 lines. Otherwise skip `001-agent/`.
 8. **Create `/docs/002-blueprint/`** with:
    - `INDEX.md`.
@@ -61,7 +61,7 @@ requires_access: write, org-level
     - `org-root/docs/003-decisions/`.
     - `org-root/docs/004-contracts/`.
     - `org-root/docs/005-cross-cutting/`.
-14. **Do NOT create `NEED_CLEARIFICATION.md`.** It is created on demand, on first ambiguity.
+14. **Do NOT create `NEED_CLARIFICATION.md`.** It is created on demand, on first ambiguity.
 15. **Return:** created paths, and any items the caller must still supply (e.g., license, getting-started commands).
 
 ---
@@ -70,7 +70,7 @@ requires_access: write, org-level
 
 - **MUST** ask before creating anything if `root_path` is not empty.
 - **MUST NOT** overwrite existing files.
-- **MUST NOT** create `NEED_CLEARIFICATION.md` unless the brief left a gap.
+- **MUST NOT** create `NEED_CLARIFICATION.md` unless the brief left a gap.
 - **MUST** use the canonical directory shape.
 - **MUST** keep `README.md` free of product intent, invariants, and contracts.
 - **MUST** set `is_org_root` or `org_root` correctly per the topology.

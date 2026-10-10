@@ -65,7 +65,7 @@ impact  ->  Change Surface  ->  (coder)  ->  diff  ->  (reviewer)
 | `rules/sectioning.md` | Sectioning doctrine: threshold, recursion, practical boundaries. |
 | `rules/file-level.md` | Sibling `<filename>.md` discovery. |
 | `rules/precedence.md` | Conflict resolution order. |
-| `rules/nc.md` | NEED_CLEARIFICATION lifecycle and schema. |
+| `rules/nc.md` | NEED_CLARIFICATION lifecycle and schema. |
 | `rules/excluded-paths.md` | Default exclusion list and re-inclusion. |
 | `rules/relationships.md` | Typed relationship model. |
 | `rules/impact.md` | Change Surface and impact analysis. |
@@ -86,7 +86,15 @@ impact  ->  Change Surface  ->  (coder)  ->  diff  ->  (reviewer)
 | `templates/runbook.md` | Operational doc |
 | `templates/flow.md` | Cross-domain flow doc |
 | `templates/change-surface.md` | Change Surface artifact |
-| `templates/nc-item.md` | NEED_CLEARIFICATION item |
+| `templates/nc-item.md` | NEED_CLARIFICATION item |
+
+## Commands and Companion Tools
+
+| Path | Purpose |
+|---|---|
+| `commands/change.md` | `/change` entry point that runs the impact workflow. |
+| `skills/change-impact/SKILL.md` | Discovery-only project skill for impact analysis. |
+| `tools/docs-map/` | Node CLI that generates and queries the documentation graph. |
 
 ## Failure Behavior
 

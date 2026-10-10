@@ -1,9 +1,9 @@
 ---
 name: nc
-purpose: NEED_CLEARIFICATION item lifecycle and schema.
+purpose: NEED_CLARIFICATION item lifecycle and schema.
 ---
 
-# Rule — NEED_CLEARIFICATION
+# Rule — NEED_CLARIFICATION
 
 ## Purpose
 
@@ -30,7 +30,7 @@ Create an NC item when an active doc does not cover a case the agent must decide
 
 ## Placement
 
-- One file per repo root: `<repo>/NEED_CLEARIFICATION.md`.
+- One file per repo root: `<repo>/NEED_CLARIFICATION.md`.
 - For cross-repo work: duplicate into each accessible affected repo's file with a shared item ID.
 - If a repo is inaccessible, only reachable repos carry the item.
 - The file does not exist until the first item is created.
@@ -58,7 +58,7 @@ Create an NC item when an active doc does not cover a case the agent must decide
 ## File Shape
 
 ```markdown
-# NEED_CLEARIFICATION
+# NEED_CLARIFICATION
 
 Open items are provisional intent. They are NOT product intent.
 When confirmed, promote into the target doc and remove the item.
@@ -115,11 +115,11 @@ If a refund API change touches `payments-api` and `payments-web`:
 - **Promotion target:** docs/004-contracts/004-001-refund-api.md
 ```
 
-Both `payments-api/NEED_CLEARIFICATION.md` and `payments-web/NEED_CLEARIFICATION.md` contain this item with the same ID `NC-0012`.
+Both `payments-api/NEED_CLARIFICATION.md` and `payments-web/NEED_CLARIFICATION.md` contain this item with the same ID `NC-0012`.
 
 ## Human Confirmation Workflow
 
-1. Human reads `NEED_CLEARIFICATION.md`.
+1. Human reads `NEED_CLARIFICATION.md`.
 2. Human tells the agent "item NC-0007 is confirmed" or "refactor to X."
 3. Agent promotes the decision:
    - If confirmed: writes it into the target doc via `docs extend`.
