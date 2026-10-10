@@ -297,10 +297,13 @@ test('parseFrontmatter: strips unquoted inline comments cleanly', () => {
   const root = createRepo({
     'a.md': `---
 id: doc/a # the primary doc
-title: Doc A # title comment
-keywords:
+title: "Doc A" # title comment
+keywords: # list follows
+  # section 1
   - auth # authentication
-references: [doc/b # inline ref]
+  - login
+references: [doc/b] # inline ref
+affects: [] # no affects
 ---
 # A`,
     'b.md': `---
@@ -314,8 +317,9 @@ id: doc/b
     const parsed = JSON.parse(res.stdout);
     assert.equal(parsed.id, 'doc/a');
     assert.equal(parsed.title, 'Doc A');
-    assert.deepEqual(parsed.keywords, ['auth']);
+    assert.deepEqual(parsed.keywords, ['auth', 'login']);
     assert.deepEqual(parsed.references, ['doc/b']);
+    assert.deepEqual(parsed.affects, []);
   } finally {
     cleanup(root);
   }
@@ -388,3 +392,26 @@ test_paths: [packages/auth/test/**]
     cleanup(root);
   }
 });
+
+test('generate: deduplicates implemented_by reverse edges', () => {
+  const root = createRepo({
+    'flow.md': `---
+id: flow:registration
+---
+# Flow`,
+    'auth.md': `---
+id: auth/registration
+implements: [flow:registration]
+---
+# Auth`,
+  });
+  try {
+    const res = runCli(root, ['generate']);
+    assert.equal(res.status, 0);
+    const rels = JSON.parse(fs.readFileSync(path.join(root, '.qwen', 'docs-index', 'relations.json'), 'utf8'));
+    assert.deepEqual(rels['flow:registration'].implemented_by, ['auth/registration']);
+  } finally {
+    cleanup(root);
+  }
+});
+

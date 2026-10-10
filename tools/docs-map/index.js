@@ -49,6 +49,39 @@ function walk(dir, acc) {
   return acc;
 }
 
+function stripComment(s) {
+  s = s.trim();
+  if (!s) return '';
+  if (s.startsWith('#')) return '';
+  if (s.startsWith('"')) {
+    const end = s.indexOf('"', 1);
+    if (end !== -1) {
+      const after = s.slice(end + 1);
+      if (after.includes('#')) return s.slice(0, end + 1).trim();
+      return s;
+    }
+  }
+  if (s.startsWith("'")) {
+    const end = s.indexOf("'", 1);
+    if (end !== -1) {
+      const after = s.slice(end + 1);
+      if (after.includes('#')) return s.slice(0, end + 1).trim();
+      return s;
+    }
+  }
+  if (s.startsWith('[')) {
+    const end = s.lastIndexOf(']');
+    if (end !== -1) {
+      const after = s.slice(end + 1);
+      if (after.includes('#')) return s.slice(0, end + 1).trim();
+      return s;
+    }
+  }
+  const cIdx = s.indexOf(' #');
+  if (cIdx !== -1) return s.slice(0, cIdx).trim();
+  return s;
+}
+
 // Minimal, dependency-free frontmatter parser (top-level scalars + inline lists).
 function parseFrontmatter(text) {
   const src = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
@@ -68,8 +101,8 @@ function parseFrontmatter(text) {
     const kv = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (!kv) continue;
     key = kv[1];
-    const val = kv[2].trim();
-    if (val === '') { out[key] = []; continue; }
+    const val = stripComment(kv[2]);
+    if (val === '' || val === '[]') { out[key] = []; continue; }
     if (val.startsWith('[') && val.endsWith(']')) {
       out[key] = val.slice(1, -1).split(',').map((s) => strip(s.trim())).filter(Boolean);
       key = null;
@@ -82,13 +115,7 @@ function parseFrontmatter(text) {
 }
 
 function strip(s) {
-  s = s.trim();
-  if (!s.startsWith('"') && !s.startsWith("'")) {
-    const commentIdx = s.indexOf(' #');
-    if (commentIdx !== -1) {
-      s = s.slice(0, commentIdx).trim();
-    }
-  }
+  s = stripComment(s);
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     return s.slice(1, -1);
   }
@@ -167,7 +194,10 @@ function load() {
   return { docs, rel, missingIds, reverseEdgeViolations };
 }
 
-function push(obj, k, v) { (obj[k] = obj[k] || []).push(v); }
+function push(obj, k, v) {
+  obj[k] = obj[k] || [];
+  if (!obj[k].includes(v)) obj[k].push(v);
+}
 
 // ---------- commands ----------
 const rawArgs = process.argv.slice(2);
@@ -271,10 +301,10 @@ function generate() {
       depends_on: d.depends_on,
       referenced_by: model.rel.references[id] || [],
       affected_by: model.rel.affects[id] || [],
-      implemented_by: [
+      implemented_by: [...new Set([
         ...(model.rel.implements[id] || []),
         ...(model.rel.implements['flow:' + id] || []),
-      ],
+      ])],
       depended_on_by: model.rel.depends_on[id] || [],
     };
   }
