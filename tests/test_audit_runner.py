@@ -80,7 +80,7 @@ class TestAuditRunner(unittest.TestCase):
     def test_skipped_test_detected(self):
         bad_spec = os.path.join(self.temp_dir, "order.spec.ts")
         with open(bad_spec, "w", encoding="utf-8") as f:
-            f.write("it.skip('should charge card', () => {});\n")
+            f.write("it." + "skip('should charge card', () => {});\n")
 
         proc = subprocess.run(
             [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
@@ -321,6 +321,110 @@ class TestAuditRunner(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         self.assertIn("Failed to parse baseline", proc.stdout)
+
+
+    def test_go_and_python_test_conventions_detected(self):
+        tests_dir = os.path.join(self.temp_dir, "tests")
+        os.makedirs(tests_dir, exist_ok=True)
+
+        go_test = os.path.join(tests_dir, "user_test.go")
+        with open(go_test, "w", encoding="utf-8") as f:
+            f.write("package test\nimport \"testing\"\nfunc TestUser(t *testing.T) { " + "assert." + "True(true) }\n")
+
+        py_test = os.path.join(tests_dir, "test_order.py")
+        with open(py_test, "w", encoding="utf-8") as f:
+            f.write("import unittest\n@" + "unittest.skip('temporarily disabled')\ndef test_fn(): pass\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-10.1-TAUTOLOGICAL-TEST", found_ids)
+        self.assertIn("RULE-10.2-SKIPPED-TEST", found_ids)
+
+    def test_packages_directory_scanned_for_violations(self):
+        pkg_dir = os.path.join(self.temp_dir, "packages", "common", "src")
+        os.makedirs(pkg_dir, exist_ok=True)
+        bad_pkg_file = os.path.join(pkg_dir, "logger.ts")
+        with open(bad_pkg_file, "w", encoding="utf-8") as f:
+            f.write("console.log('Unstructured debug statement');\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-6.1-BARE-CONSOLE-LOG", found_ids)
+
+    def test_subproject_depth_calculation(self):
+        # 6 levels inside services/billing: src/l1/l2/l3/l4/l5 (total 8 parts from root) -> PASS
+        ok_dir = os.path.join(self.temp_dir, "services", "billing", "src", "l1", "l2", "l3", "l4", "l5")
+        os.makedirs(ok_dir, exist_ok=True)
+        ok_file = os.path.join(ok_dir, "billing.ts")
+        with open(ok_file, "w", encoding="utf-8") as f:
+            f.write("export const ok = 1;\n")
+
+        proc1 = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc1.returncode, 0)
+        res1 = json.loads(proc1.stdout)
+        found_ids1 = [f["id"] for f in res1["findings"]]
+        self.assertNotIn("RULE-2.5-OVER-NESTED-DIRECTORY", found_ids1)
+
+        # 7 levels inside services/billing: src/l1/l2/l3/l4/l5/l6/l7 (total 10 parts from root) -> FAIL
+        too_deep = os.path.join(self.temp_dir, "services", "billing", "src", "l1", "l2", "l3", "l4", "l5", "l6", "l7")
+        os.makedirs(too_deep, exist_ok=True)
+        deep_file = os.path.join(too_deep, "deep.ts")
+        with open(deep_file, "w", encoding="utf-8") as f:
+            f.write("export const deep = 1;\n")
+
+        proc2 = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc2.returncode, 0)
+        res2 = json.loads(proc2.stdout)
+        found_ids2 = [f["id"] for f in res2["findings"]]
+        self.assertIn("RULE-2.5-OVER-NESTED-DIRECTORY", found_ids2)
+
+    def test_dict_baseline_handled_gracefully(self):
+        bad_file = os.path.join(self.temp_dir, "legacy_file.ts")
+        with open(bad_file, "w", encoding="utf-8") as f:
+            f.write("try { doLegacy(); } catch (e) {}\n")
+
+        dict_baseline = os.path.join(self.temp_dir, "dict_baseline.json")
+        baseline_content = {
+            "verdict": "FAIL",
+            "findings": [
+                {
+                    "id": "RULE-8.1-EMPTY-CATCH",
+                    "file": bad_file.replace("\\", "/"),
+                    "line": 1,
+                }
+            ],
+        }
+        with open(dict_baseline, "w", encoding="utf-8") as f:
+            json.dump(baseline_content, f)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--baseline", dict_baseline, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        self.assertEqual(res["verdict"], "PASS")
+        self.assertEqual(res["baseline_suppressed"], 1)
 
 
 if __name__ == "__main__":

@@ -27,7 +27,15 @@ TIER_1_BANNED_OVERRIDES = {
     "single-monorepo",
     "nx-orchestration",
     "14-day-nc",
+    "nc-block",
     "2-pass-audit",
+    "pr-audit",
+    "change-surface",
+    "mandatory-change-surface",
+    "max-dir-depth",
+    "directory-depth",
+    "expand-contract",
+    "expand-contract-migration",
 }
 
 REQUIRED_SECTIONS = [

@@ -232,5 +232,42 @@ Tests.
         self.assertIn("[PASS]", proc.stdout)
 
 
+    def test_additional_tier_1_overrides_fail(self):
+        for banned_rule in ["max-dir-depth", "expand-contract", "mandatory-change-surface", "nc-block"]:
+            sub_dir = os.path.join(self.temp_dir, "services", f"test-{banned_rule}")
+            os.makedirs(sub_dir, exist_ok=True)
+            agent_file = os.path.join(sub_dir, "AGENT.md")
+            content = f"""---
+project_name: "test-{banned_rule}"
+profile: "A"
+stack: "node"
+scope: "backend"
+tier_overrides:
+  - rule: "{banned_rule}"
+    adr_reference: "docs/adr/0001.md"
+---
+
+# Service
+## 1. Scope & Business Intent
+Scope.
+## 2. Architectural Profile
+Profile.
+## 3. Local Nx Target
+Target.
+## 4. Test & Verification
+Tests.
+"""
+            with open(agent_file, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            proc = subprocess.run(
+                [str(BIN_DIR / "verify-agent-manifests"), "--root", sub_dir],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn(f"Illegal Tier 1 override attempted for rule '{banned_rule}'", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

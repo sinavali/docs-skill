@@ -295,5 +295,36 @@ discovered_by: "agent"
         self.assertIn("missing required 'resolved_date'", proc.stdout)
 
 
+    def test_inline_bracket_list_affected_projects(self):
+        nc_file = os.path.join(self.temp_dir, "NC-BRACKET.md")
+        content = """---
+id: "NC-20261010-011"
+status: "OPEN"
+created_date: "2026-10-10"
+discovered_by: "agent"
+affected_projects: ["services/order", "services/billing"]
+---
+# Bracket List Item
+"""
+        with open(nc_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [
+                str(BIN_DIR / "check-nc-items"),
+                "--dir",
+                self.temp_dir,
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
+        import json
+        res = json.loads(proc.stdout)
+        self.assertEqual(len(res["open_items"]), 1)
+        self.assertEqual(res["open_items"][0]["affected_projects"], ["services/order", "services/billing"])
+
+
 if __name__ == "__main__":
     unittest.main()
