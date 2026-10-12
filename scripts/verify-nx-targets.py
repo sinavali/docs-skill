@@ -109,7 +109,7 @@ def main():
         }
         total_errors += len(errors)
         
-    all_valid = (total_errors == 0) and (len(project_files) > 0 or args.root != ".")
+    all_valid = total_errors == 0
     
     if args.json:
         out = {

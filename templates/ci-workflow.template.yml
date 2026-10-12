@@ -38,12 +38,7 @@ jobs:
 
       - name: Validate PR Change Surface
         if: github.event_name == 'pull_request'
-        run: |
-          if [ -f "CHANGE_SURFACE.md" ]; then
-            python3 scripts/validate-change-surface.py CHANGE_SURFACE.md
-          else
-            echo "::warning ::No CHANGE_SURFACE.md found at root. Checking branch commits..."
-          fi
+        run: python3 scripts/validate-change-surface.py
 
   nx-pipeline:
     name: Nx Affected Matrix

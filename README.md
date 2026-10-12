@@ -42,7 +42,7 @@ enterprise-product/
 ├── LICENSE                           # MIT License
 ├── README.md                         # This guide
 ├── references/                       # In-depth architectural & operational specifications
-│   ├── core-directives.md            # Prime Directives P1–P8 & Tier 1/2/3 Master Rulebook
+│   ├── core-directives.md            # Prime Directives P1–P10 & Tier 1/2/3 Master Rulebook
 │   ├── architectural-profiles.md     # Profile A (DDD), Profile B (Web), Profile C (Flutter), Profile D (Contracts)
 │   ├── monorepo-nx-standard.md       # Root Nx orchestration & project.json target contracts
 │   ├── agent-hierarchy-spec.md       # AGENT.md schema, inheritance rules, and precedence

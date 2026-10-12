@@ -11,7 +11,7 @@ AI agents must read context hierarchically. Directives cascade from the reposito
 ```text
 ┌────────────────────────────────────────────────────────┐
 │  Root AGENT.md (Org & Monorepo Level)                  │
-│  - Prime Directives (P1–P8)                            │
+│  - Prime Directives (P1–P10)                           │
 │  - Monorepo Nx Standard & CI Policies                  │
 │  - Global Tier 1 Inviolables & Tier 2 Defaults         │
 └──────────────────────────┬─────────────────────────────┘

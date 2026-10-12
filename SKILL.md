@@ -121,7 +121,7 @@ Agents operate under one of five distinct modes. When invoked, determine or decl
 
 Do not load all reference files simultaneously. Read on demand based on current mode:
 
-- `references/core-directives.md` — Prime Directives P1–P8, Tier 1/2/3 Master Rulebook, UTC conventions, self-hosted preferences.
+- `references/core-directives.md` — Prime Directives P1–P10, Tier 1/2/3 Master Rulebook, UTC conventions, self-hosted preferences.
 - `references/architectural-profiles.md` — Deep profiles for Backend (DDD/Hexagonal), Web (Next/Nuxt), Mobile (Flutter), Shared Contracts.
 - `references/monorepo-nx-standard.md` — Root Nx orchestration, project.json contracts, target delegation.
 - `references/agent-hierarchy-spec.md` — AGENT.md schema, cascading inheritance, overrides vs invariants.
