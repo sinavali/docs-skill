@@ -47,14 +47,17 @@ EXCLUDED_DIRS = {
     ".cache",
     ".venv",
     "vendor",
+    "templates",
+    "__pycache__",
 }
 
 
 def parse_agent_yaml(content: str) -> Tuple[Dict, str]:
-    if not content.startswith("---"):
+    stripped_content = content.lstrip("\ufeff \t\r\n")
+    if not stripped_content.startswith("---"):
         return {}, content
 
-    parts = content.split("---", 2)
+    parts = stripped_content.split("---", 2)
     if len(parts) < 3:
         return {}, content
 
@@ -70,8 +73,8 @@ def parse_agent_yaml(content: str) -> Tuple[Dict, str]:
         if not line or line.startswith("#"):
             continue
 
-        # Check for list start or items
-        list_dict_match = re.match(r"^\s+-\s*([a-zA-Z0-9_-]+):\s*(.*)$", line)
+        # Check for list start or items (indented or unindented)
+        list_dict_match = re.match(r"^\s*-\s*([a-zA-Z0-9_-]+):\s*(.*)$", line)
         if list_dict_match and current_list == "tier_overrides":
             k = list_dict_match.group(1).strip()
             raw_v = list_dict_match.group(2).strip()
@@ -141,8 +144,8 @@ def verify_agent_manifest(
     frontmatter, body = parse_agent_yaml(content)
     is_root = os.path.abspath(file_path) == os.path.abspath(os.path.join(root_dir, "AGENT.md"))
 
-    # For subproject AGENT.md, frontmatter is strictly required
-    if not is_root or frontmatter:
+    # For subproject AGENT.md, frontmatter is strictly required with project properties
+    if not is_root:
         if not frontmatter:
             errors.append("Missing required YAML frontmatter.")
         else:
@@ -158,23 +161,26 @@ def verify_agent_manifest(
             if sc and sc not in ALLOWED_SCOPES:
                 errors.append(f"Invalid scope '{sc}'. Must be one of: {', '.join(sorted(ALLOWED_SCOPES))}")
 
-            overrides = frontmatter.get("tier_overrides", [])
-            if isinstance(overrides, list):
-                for ov in overrides:
-                    if not isinstance(ov, dict):
-                        continue
-                    rule = ov.get("rule", "").lower()
-                    if rule in TIER_1_BANNED_OVERRIDES:
-                        errors.append(f"Illegal Tier 1 override attempted for rule '{rule}'. Tier 1 rules are inviolable.")
+    # Check tier overrides (for both root and subproject manifests if present)
+    overrides = frontmatter.get("tier_overrides", []) if frontmatter else []
+    if isinstance(overrides, list):
+        for ov in overrides:
+            if not isinstance(ov, dict):
+                continue
+            rule = ov.get("rule", "")
+            norm_rule = rule.lower().strip().replace("_", "-").replace(" ", "-")
+            if norm_rule in TIER_1_BANNED_OVERRIDES:
+                errors.append(f"Illegal Tier 1 override attempted for rule '{rule}'. Tier 1 rules are inviolable.")
 
-                    adr = ov.get("adr_reference")
-                    if not adr:
-                        errors.append(f"Tier override '{rule}' is missing required 'adr_reference'.")
-                    elif check_adrs:
-                        # Check ADR file path relative to root
-                        adr_full_path = os.path.join(root_dir, adr)
-                        if not os.path.exists(adr_full_path):
-                            errors.append(f"Referenced ADR file does not exist: '{adr}'")
+            adr = ov.get("adr_reference")
+            if not adr:
+                errors.append(f"Tier override '{rule}' is missing required 'adr_reference'.")
+            elif check_adrs:
+                # Check ADR file path relative to root or relative to manifest directory
+                path_from_root = os.path.join(root_dir, adr)
+                path_from_manifest = os.path.join(os.path.dirname(file_path), adr)
+                if not (os.path.exists(path_from_root) or os.path.exists(path_from_manifest)):
+                    errors.append(f"Referenced ADR file does not exist: '{adr}'")
 
     # Section validation for non-root AGENT.md files
     if not is_root:

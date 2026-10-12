@@ -26,6 +26,8 @@ EXCLUDED_DIRS = {
     ".cache",
     ".venv",
     "vendor",
+    "templates",
+    "__pycache__",
 }
 
 
@@ -68,8 +70,8 @@ def verify_project_file(file_path: str, strict_tags: bool = True) -> Tuple[bool,
                 target_def = targets[mandatory]
                 if not isinstance(target_def, dict):
                     errors.append(f"Target '{mandatory}' definition must be an object.")
-                elif "executor" not in target_def and "command" not in target_def:
-                    errors.append(f"Target '{mandatory}' must define an 'executor' or 'command'.")
+                elif "executor" not in target_def and "command" not in target_def and "dependsOn" not in target_def:
+                    errors.append(f"Target '{mandatory}' must define an 'executor', 'command', or 'dependsOn'.")
 
     if strict_tags:
         tags = data.get("tags")

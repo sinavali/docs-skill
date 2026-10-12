@@ -1,7 +1,7 @@
 ---
-id: "NC-20261012-001"
+id: "NC-YYYYMMDD-001"
 status: "OPEN"                        # OPEN | RESOLVED | ABANDONED
-created_date: "2026-10-12"            # Format: YYYY-MM-DD
+created_date: "YYYY-MM-DD"            # Format: YYYY-MM-DD
 resolved_date: null
 discovered_by: "[Agent ID or Contributor]"
 severity: "blocking"                 # blocking | non-blocking

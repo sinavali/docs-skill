@@ -14,6 +14,42 @@ import sys
 from typing import Dict, List, Optional, Tuple
 
 
+EXCLUDED_DIRS = {
+    "node_modules",
+    ".git",
+    ".nx",
+    "dist",
+    "build",
+    "coverage",
+    ".cache",
+    ".venv",
+    "vendor",
+    "templates",
+    "__pycache__",
+}
+
+VALID_STATUSES = {"OPEN", "RESOLVED", "ABANDONED"}
+
+
+def parse_date(date_str: str) -> Optional[datetime.date]:
+    if not date_str:
+        return None
+    cleaned = str(date_str).strip().strip("\"'")
+    if "T" in cleaned or " " in cleaned:
+        cleaned = cleaned.split("T")[0].split(" ")[0]
+    cleaned = cleaned.replace("/", "-")
+    try:
+        return datetime.date.fromisoformat(cleaned)
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y"):
+        try:
+            return datetime.datetime.strptime(cleaned, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
 def parse_nc_file(file_path: str) -> Optional[Dict]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -21,10 +57,11 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
     except Exception:
         return None
 
-    if not content.startswith("---"):
+    stripped_content = content.lstrip("\ufeff \t\r\n")
+    if not stripped_content.startswith("---"):
         return None
 
-    parts = content.split("---", 2)
+    parts = stripped_content.split("---", 2)
     if len(parts) < 3:
         return None
 
@@ -37,9 +74,15 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
         if not line or line.startswith("#"):
             continue
 
-        list_match = re.match(r"^\s+-\s*[\"']?(.*?)[\"']?\s*$", line)
+        list_match = re.match(r"^\s*-\s*(.*?)$", line)
         if list_match and current_list_key:
-            data[current_list_key].append(list_match.group(1))
+            raw_item = list_match.group(1).strip()
+            if "#" in raw_item:
+                m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_item)
+                raw_item = m.group(1) if m else raw_item.split("#", 1)[0].strip()
+            item_val = raw_item.strip("\"'")
+            if item_val:
+                data[current_list_key].append(item_val)
             continue
 
         kv_match = re.match(r"^([a-zA-Z0-9_-]+):\s*(.*)$", line)
@@ -48,10 +91,7 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
             raw_v = kv_match.group(2).strip()
             if "#" in raw_v:
                 m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_v)
-                if m:
-                    raw_v = m.group(1)
-                else:
-                    raw_v = raw_v.split("#", 1)[0].strip()
+                raw_v = m.group(1) if m else raw_v.split("#", 1)[0].strip()
             v = raw_v.strip("\"'")
             if v == "" or v == "[]":
                 data[k] = []
@@ -60,7 +100,8 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
                 data[k] = v
                 current_list_key = None
 
-    if "id" not in data or not str(data["id"]).startswith("NC-"):
+    nc_id = str(data.get("id", ""))
+    if not nc_id.startswith("NC-") or any(p in nc_id.upper() for p in ["YYYY", "XXXX", "TEMPLATE", "["]):
         return None
 
     return data
@@ -77,9 +118,10 @@ def scan_nc_items(scan_dir: str) -> List[Dict]:
             items.append(parsed)
         return items
 
-    for root, _, files in os.walk(scan_dir):
+    for root, dirs, files in os.walk(scan_dir):
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith(".")]
         for f in files:
-            if f.endswith(".md"):
+            if f.endswith(".md") and not f.endswith(".template.md"):
                 full_path = os.path.join(root, f)
                 parsed = parse_nc_file(full_path)
                 if parsed:
@@ -103,14 +145,17 @@ def audit_nc_items(
         status = str(item.get("status", "OPEN")).upper()
         created_str = item.get("created_date")
 
+        if status not in VALID_STATUSES:
+            errors.append(f"{nc_id} ({item['file_path']}): Invalid status '{status}'. Expected one of: {', '.join(sorted(VALID_STATUSES))}")
+            continue
+
         if not created_str:
             errors.append(f"{nc_id} ({item['file_path']}): Missing created_date.")
             continue
 
-        try:
-            created_date = datetime.date.fromisoformat(str(created_str))
-        except ValueError:
-            errors.append(f"{nc_id} ({item['file_path']}): Invalid created_date '{created_str}'. Expected YYYY-MM-DD.")
+        created_date = parse_date(created_str)
+        if not created_date:
+            errors.append(f"{nc_id} ({item['file_path']}): Invalid created_date '{created_str}'. Expected valid ISO date.")
             continue
 
         age_days = (as_of_date - created_date).days

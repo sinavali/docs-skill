@@ -39,10 +39,11 @@ PLACEHOLDER_PATTERNS = [
 
 
 def parse_frontmatter(content: str) -> Tuple[Dict, str]:
-    if not content.startswith("---"):
+    stripped_content = content.lstrip("\ufeff \t\r\n")
+    if not stripped_content.startswith("---"):
         return {}, content
     
-    parts = content.split("---", 2)
+    parts = stripped_content.split("---", 2)
     if len(parts) < 3:
         return {}, content
     
@@ -58,10 +59,16 @@ def parse_frontmatter(content: str) -> Tuple[Dict, str]:
         if not line or line.startswith("#"):
             continue
         
-        # List item
-        list_match = re.match(r"^\s+-\s*[\"']?(.*?)[\"']?\s*$", line)
+        # List item (handles indented or unindented list bullets)
+        list_match = re.match(r"^\s*-\s*(.*?)$", line)
         if list_match and current_list_key:
-            data[current_list_key].append(list_match.group(1))
+            raw_item = list_match.group(1).strip()
+            if "#" in raw_item:
+                m = re.match(r"^([\"'].*?[\"'])\s*(?:#.*)?$", raw_item)
+                raw_item = m.group(1) if m else raw_item.split("#", 1)[0].strip()
+            item_val = raw_item.strip("\"'")
+            if item_val:
+                data[current_list_key].append(item_val)
             continue
         
         # Key-value
@@ -130,7 +137,7 @@ def validate_change_surface(file_path: str, strict: bool = False) -> Tuple[bool,
     code_surface_match = re.search(r"^##\s*3\.\s*Code\s*Surface[^\n]*\n(.*?)(?=\n##\s+[0-9]|\Z)", body, re.DOTALL | re.IGNORECASE | re.MULTILINE)
     if code_surface_match:
         code_surface_text = code_surface_match.group(1)
-        if re.search(r"(?:^|\s)\*(?:\s|$)", code_surface_text):
+        if re.search(r"(?:^|\n)\s*[-*]?\s*[`]?\*[`]?\s*(?:\n|$)", code_surface_text):
             errors.append("Code Surface contains unconstrained bare wildcard '*' which is forbidden.")
         if not any(marker in code_surface_text for marker in ["- `", "* `", "### Added", "### Modified"]):
             errors.append("Code Surface does not list explicit files or symbol targets.")

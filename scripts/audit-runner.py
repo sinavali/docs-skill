@@ -31,6 +31,14 @@ DIMENSIONS = [
 # Static heuristic scanners for critical enterprise anti-patterns
 HEURISTIC_RULES = [
     {
+        "dim": 1,
+        "id": "RULE-1.1-UNBOUNDED-SCAN",
+        "severity": "suggestion",
+        "description": "Unbounded collection query or full-table scan pattern without explicit limit.",
+        "path_regex": r"(services|apps)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "content_regex": r"(\.findAll\(\s*\)|\.find\(\{\s*\}\)|SELECT\s+\*\s+FROM\s+[a-zA-Z0-9_]+\s*;)",
+    },
+    {
         "dim": 2,
         "id": "RULE-2.1-ORM-IN-DOMAIN",
         "severity": "blocking",
@@ -39,11 +47,19 @@ HEURISTIC_RULES = [
         "content_regex": r"(from ['\"](typeorm|prisma|sequelize|mongoose|gorm)['\"]|using Microsoft\.EntityFrameworkCore|use Illuminate\\Database|import sqlalchemy)",
     },
     {
+        "dim": 3,
+        "id": "RULE-3.1-INFINITE-RETRY",
+        "severity": "blocking",
+        "description": "Unbounded or infinite retry loop without max retry cap or backoff.",
+        "path_regex": r"\.(ts|js|go|cs|php|py)$",
+        "content_regex": r"(retries:\s*Infinity|maxRetries:\s*-1|while\s*\(true\)\s*\{\s*try)",
+    },
+    {
         "dim": 4,
         "id": "RULE-4.1-SQLITE-IN-INTEGRATION",
         "severity": "blocking",
         "description": "Banned in-memory SQL emulator (SQLite/H2) used in integration tests.",
-        "path_regex": r"(tests?|integration)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"(?:integration[\\/]|tests?[\\/].*integration|[._-]integration\.).*\.(ts|js|go|cs|php|py)$",
         "content_regex": r"(:memory:|sqlite3\.connect\(['\"]:memory:['\"]\)|UseSqlite\(|createConnection\(\{.*type:\s*['\"]sqlite['\"])",
     },
     {
@@ -55,6 +71,22 @@ HEURISTIC_RULES = [
         "content_regex": r"(apiKey|api_key|secretKey|private_key|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]",
     },
     {
+        "dim": 5,
+        "id": "RULE-5.2-RAW-SQL-CONCAT",
+        "severity": "blocking",
+        "description": "Possible unparameterized SQL string concatenation; risk of injection.",
+        "path_regex": r"(services|apps)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "content_regex": r"(\.raw\(|query\()(['\"].*?\b(SELECT|INSERT|UPDATE|DELETE)\b.*?\s*(\+|%)\s*|\s*f['\"].*?\b(SELECT|INSERT|UPDATE|DELETE)\b)",
+    },
+    {
+        "dim": 6,
+        "id": "RULE-6.1-BARE-CONSOLE-LOG",
+        "severity": "suggestion",
+        "description": "Direct console.log in production code; prefer structured JSON logging.",
+        "path_regex": r"(services|apps)[\\/].*src[\\/].*\.(ts|js)$",
+        "content_regex": r"console\.(log|debug)\(",
+    },
+    {
         "dim": 8,
         "id": "RULE-8.1-EMPTY-CATCH",
         "severity": "blocking",
@@ -63,12 +95,28 @@ HEURISTIC_RULES = [
         "content_regex": r"catch\s*\([^\)]*\)\s*\{\s*\}",
     },
     {
+        "dim": 8,
+        "id": "RULE-8.2-EXPLICIT-ANY",
+        "severity": "suggestion",
+        "description": "Untyped 'any' in production TypeScript; use strict types or unknown.",
+        "path_regex": r"(services|apps)[\\/].*src[\\/].*\.(ts|tsx)$",
+        "content_regex": r":\s*any\b",
+    },
+    {
         "dim": 10,
         "id": "RULE-10.1-TAUTOLOGICAL-TEST",
         "severity": "blocking",
         "description": "Tautological or vacuous test assertion detected.",
         "path_regex": r"\.(spec|test)\.(ts|js|go|cs|py)$",
         "content_regex": r"(expect\(true\)\.toBe\(true\)|assert\.(True|Equal)\(true|assert 1 == 1)",
+    },
+    {
+        "dim": 10,
+        "id": "RULE-10.2-SKIPPED-TEST",
+        "severity": "blocking",
+        "description": "Skipped test detected in test suite; disabled tests mask regressions.",
+        "path_regex": r"\.(spec|test)\.(ts|js|go|cs|py)$",
+        "content_regex": r"(\b(xit|it\.skip|describe\.skip|test\.skip)\b|@unittest\.skip)",
     },
 ]
 
@@ -83,6 +131,8 @@ EXCLUDED_DIRS = {
     ".venv",
     "vendor",
     "fixtures",
+    "templates",
+    "__pycache__",
 }
 
 
