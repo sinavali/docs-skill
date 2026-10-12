@@ -14,21 +14,26 @@ The **supreme enterprise gatekeeper and engineering operating system** for polyg
 1. **Monorepo Standard**: Every product is strictly a single monorepo governed at the root by **Nx** (`nx affected`, target delegations, dependency graph validation).
 2. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to project-level `AGENT.md` files. Subprojects specialize configuration but can never violate Tier 1 directives.
 3. **Architectural Profiles**:
-   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in pure domain logic.
-   - **Profile B (Frontend & Web Apps)**: Clean Component & State Layering, SSR hydration safety, strict accessibility (WCAG 2.2 AA), bundle budgets, zero-trust web security.
-   - **Profile C (Mobile Clients - Flutter)**: Clean Architecture + State Machine isolation (BLoC/Notifier), encrypted local storage (SQLCipher), offline-first sync, battery/lifecycle awareness.
+   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in pure domain logic. Transactional outbox for events.
+   - **Profile B (Web Applications)**: Clean Component & State Layering, SSR/SPA hydration safety, strict accessibility (WCAG 2.2 AA), bundle budgets, zero-trust web security.
+   - **Profile C (Mobile Clients - Native & Cross-Platform)**: Clean Architecture + Unidirectional State Flow, hardware-backed encrypted storage (Keychain/KeyStore/SQLCipher), offline-first sync, battery/lifecycle awareness.
    - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI/Protobuf), strict SemVer, zero ambient side-effects.
 4. **Value-Driven Testing Matrix**:
    - Domain logic: $\ge 95\%$ line & branch coverage.
-   - Adapters & Infrastructure: $\ge 80\%$ line coverage with **real ephemeral containers (Testcontainers/Podman)**; in-memory SQL mocks are strictly prohibited.
+   - Adapters & Infrastructure: $\ge 80\%$ line coverage with **real ephemeral containers (Testcontainers/Podman)**; engine-substitution emulators (e.g. SQLite for Postgres) are strictly prohibited.
    - Mandatory test types: Domain/Unit, Integration, Contract, Failure/Resilience (timeouts, circuit breakers), Concurrency/Race conditions.
-5. **Pre-Implementation Change Surface**: Non-trivial modifications require a declared `Change Surface` artifact before code changes begin.
-6. **2-Pass PR Self-Audit & Automated Merge Protocol**:
+5. **Structural Bounding & Anti-Sprawl Rules**:
+   - Files $\le 800$ lines (soft target $\le 400$ lines).
+   - Maximum directory depth $\le 6$ levels from project root.
+   - Co-location of tightly coupled domain artifacts over excessive micro-file fragmentation ($< 20$ lines).
+   - Zero generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`).
+6. **Pre-Implementation Change Surface**: Non-trivial modifications require a declared and validated `Change Surface` artifact before code changes begin.
+7. **2-Pass PR Self-Audit & Automated Merge Protocol**:
    - Pass 1: Full diff audit against enterprise checklist ➔ Apply fixes ➔ Commit ➔ Push.
    - Pass 2: Cumulative diff re-audit + CI verification. If 0 blocking defects and CI is green ➔ `gh pr merge --squash`. Escalates to human review on persistent defects or branch protection requirements.
-7. **Complete Documentation & NC Protocol**:
+8. **Complete Documentation & NC Protocol**:
    - Ambiguities are recorded as formal `NEED_CLARIFICATION` (NC) items. Open NC items older than 14 days mechanically block merges.
-   - ADRs for all architectural modifications.
+   - ADRs for all architectural modifications. Expand/Contract pattern for zero-downtime database migrations.
 
 ---
 

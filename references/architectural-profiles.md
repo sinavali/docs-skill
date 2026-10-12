@@ -63,18 +63,23 @@ services/<service-name>/
     └── contract/                     # Pact or schema verification tests
 ```
 
-### 4. Forbidden Patterns in Profile A
+### 4. Distributed Resilience & Transactional Integrity
+- **Transactional Outbox Pattern**: In distributed event-driven systems, use cases that mutate aggregate state and emit domain events must persist the event to a local transactional `outbox` table within the same ACID database transaction. Direct in-memory publishing to network message brokers without an outbox is strictly forbidden for non-idempotent operations.
+- **Idempotency Keys**: All mutating ingress boundaries (REST controllers, gRPC handlers, message consumers) must accept and enforce an idempotency key with TTL deduplication.
+- **Graceful Shutdown**: Servers must trap `SIGTERM`/`SIGINT`, stop accepting new inbound connections, drain active HTTP/gRPC requests within a configured grace period (15–30s), finish processing active queue messages, and cleanly close database connection pools.
+
+### 5. Forbidden Patterns in Profile A
 - **Anemic Domain Models**: Entities acting as plain property bags with external procedural logic modifying state directly. Invariants must be guarded inside entities.
-- **Leaking ORM Entities into Domain**: Exposing Hibernate/Prisma/Entity Framework/Eloquent models as domain models. Persistence models must map to domain entities.
-- **In-Memory SQL Mocks in Integration Tests**: Using SQLite in place of PostgreSQL/MySQL in tests. Must use Testcontainers or Podman.
+- **Leaking ORM Entities into Domain**: Exposing Hibernate/Prisma/Entity Framework/Eloquent/GORM models as domain models. Persistence models must map to domain entities.
+- **Engine-Substitution Mocks in Integration Tests**: Substituting PostgreSQL/MySQL with in-memory SQLite in tests. (Using SQLite in tests is permitted only if SQLite is the actual production engine). Must use Testcontainers or Podman.
 - **Ambient Time Calls**: Calling `DateTime.Now`, `time.Now()`, `Date.now()` inside domain or use-cases. Must inject a `ClockPort`.
-- **Framework Attributes/Annotations on Domain Types**: ORM annotations (`@Table`, `@Column`, `[Table]`) inside domain models.
+- **Framework Attributes/Annotations on Domain Types**: ORM annotations (`@Table`, `@Column`, `[Table]`) inside pure domain models.
 
 ---
 
-## Profile B: Frontend & Web Apps (Next.js, Nuxt, SvelteKit)
+## Profile B: Web Applications (SSR, SSG, SPA)
 
-Profile B governs server-side rendered (SSR), static, and client-rendered enterprise web applications.
+Profile B governs server-side rendered (SSR), static (SSG), and single-page (SPA) enterprise web applications across any web framework (React, Next.js, Vue, Nuxt, Angular, Svelte, SvelteKit, Astro, Solid, HTMX).
 
 ### 1. Architectural Model: Clean Component & State Layering
 Web applications decouple presentation, state machines, and data access into distinct layers:
@@ -82,118 +87,117 @@ Web applications decouple presentation, state machines, and data access into dis
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Presentation Layer (Atomic / Composable UI Components)     │
-│  Pure renderers, zero business logic, WCAG 2.2 compliant    │
+│  Pure renderers, zero business logic, WCAG 2.2 AA compliant │
 ├─────────────────────────────────────────────────────────────┤
-│  Feature & State Layer (Custom Hooks / Stores / Machines)   │
+│  Feature & State Layer (Hooks / Stores / View-Models)       │
 │  State transitions, optimistic updates, view-models         │
 ├─────────────────────────────────────────────────────────────┤
 │  Domain & Contract Client Layer (Typed API Clients, DTOs)   │
-│  Zod / Valibot schema validation, OpenAPI clients           │
+│  Runtime schema validation (Zod/Valibot), OpenAPI clients   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 2. Canonical Directory Layout
 ```text
 apps/<web-app-name>/
-├── project.json
+├── project.json                      # Task orchestrator configuration
 ├── AGENT.md                          # Profile B manifest
 ├── src/
-│   ├── app/                          # Routing & layouts (Next.js App Router / Nuxt pages)
-│   ├── components/                   # UI Components
+│   ├── routes/                       # Routing & page entrypoints (app/, pages/, or routes/)
+│   ├── components/                   # Reusable UI Components
 │   │   ├── ui/                       # Primitive design system components (buttons, dialogs)
 │   │   └── feedback/                 # Error boundaries, loading states, empty states
-│   ├── features/                     # Feature slices
+│   ├── features/                     # Cohesive feature slices
 │   │   └── <feature-name>/
 │   │       ├── components/           # Feature-specific composition widgets
-│   │       ├── hooks/                # Feature state logic & mutations
+│   │       ├── hooks/                # Feature state logic, queries & mutations
 │   │       └── state/                # Store slices / state machines
-│   ├── contracts/                    # Auto-generated API client & Zod response validators
+│   ├── contracts/                    # Auto-generated API client & runtime schema validators
 │   └── lib/                          # Framework utilities, telemetry, auth session
 └── tests/
-    ├── unit/                         # Component and hook unit tests (Vitest / Jest)
-    ├── e2e/                          # Critical user journey tests (Playwright)
+    ├── unit/                         # Component and state logic unit tests
+    ├── e2e/                          # Critical user journey tests (Playwright/Cypress)
     └── a11y/                         # Automated accessibility test suite (Axe-core)
 ```
 
 ### 3. Non-Negotiable Mandates
-- **SSR Hydration Safety**: No window/document access during SSR execution. No hydration mismatch bugs.
-- **Accessibility (WCAG 2.2 AA)**: Interactive elements must have accessible labels, keyboard navigation, and appropriate ARIA attributes.
-- **Bundle Budgets**: Project `project.json` must enforce maximum initial JS bundle size ($\le 180 \text{ KB}$ gzipped).
-- **Zero-Trust Web Security**: Strict Content Security Policy (CSP), sanitized outputs against XSS, HTTP-only secure cookies for tokens, CSRF tokens on mutating requests.
+- **SSR Hydration Safety**: No window/document access during SSR execution. Zero hydration mismatch errors.
+- **Accessibility (WCAG 2.2 AA)**: Interactive elements must have accessible labels, full keyboard navigation, and proper ARIA semantics.
+- **Bundle Budgets**: Enforce initial bundle size budgets ($\le 180 \text{ KB}$ gzipped for critical entrypoints).
+- **Zero-Trust Web Security**: Strict Content Security Policy (CSP), sanitized outputs against XSS, HTTP-only secure cookies for tokens, anti-CSRF protection on mutating requests.
 
 ### 4. Forbidden Patterns in Profile B
-- **Direct API Fetches inside Presentation Components**: Components must receive data through feature hooks or props.
+- **Direct API Fetches inside Presentation Components**: Components must receive data through feature hooks, view-models, or props.
 - **Missing Loading/Error/Empty States**: Every dynamic view must implement explicit visual states for Loading, Empty, Success, and Error.
-- **Unvalidated External Data**: Parsing API responses using `any` or untyped casts without runtime schema validation (e.g. Zod).
+- **Unvalidated External Data**: Parsing API responses using `any` or untyped casts without runtime schema validation.
 - **Inline Styles & Ad-Hoc CSS**: Arbitrary inline color hexes and margins bypassing design tokens.
 
 ---
 
-## Profile C: Mobile Clients (Flutter)
+## Profile C: Mobile Clients (Native iOS, Android, and Cross-Platform)
 
-Profile C governs mobile applications built with Flutter targeting iOS, Android, and desktop platforms.
+Profile C governs mobile applications across all platforms and toolchains: Native iOS (Swift/SwiftUI), Native Android (Kotlin/Jetpack Compose), Flutter (Dart), React Native (TypeScript), and Kotlin Multiplatform (KMP).
 
-### 1. Architectural Model: Clean Architecture + BLoC State Machines
-Separation of UI widgets from reactive state machines and encrypted persistence:
+### 1. Architectural Model: Clean Mobile Architecture & Unidirectional State Flow
+Separation of native UI views from reactive state machines and encrypted persistence:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  Presentation Layer (Flutter Widgets, Pages, Theme)         │
-│  Zero business calculations; binds strictly to BLoC states  │
+│  Presentation Layer (Native Views, Screens, Navigation)     │
+│  Zero business calculations; binds strictly to state streams│
 ├─────────────────────────────────────────────────────────────┤
-│  BLoC / State Layer (Events -> State Machine -> Transitions)│
-│  Handles state machines, offline-first queuing, concurrency │
+│  State Machine Layer (BLoC / MVI / Redux / View-Models)     │
+│  Unidirectional data flow, offline-first queue, lifecycle   │
 ├─────────────────────────────────────────────────────────────┤
 │  Domain Layer (Entities, Use Cases, Repository Contracts)   │
-│  Pure Dart, zero Flutter framework dependencies            │
+│  Pure language logic, zero UI framework dependencies        │
 ├─────────────────────────────────────────────────────────────┤
-│  Data Layer (Repositories, SQLCipher, REST/gRPC Clients)    │
-│  Hardware encryption, offline synchronization, caching     │
+│  Data Layer (Repositories, Encrypted DB, REST/gRPC Clients) │
+│  Hardware encryption, offline synchronization, caching      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 2. Canonical Directory Layout
 ```text
 apps/<mobile-app-name>/
-├── project.json
+├── project.json                      # Task orchestrator configuration
 ├── AGENT.md                          # Profile C manifest
-├── pubspec.yaml
-├── lib/
+├── src/ (or lib/ for Flutter, app/ for Android/iOS)
 │   ├── core/                         # Network clients, encrypted storage, error handling
 │   │   ├── error/
 │   │   ├── network/
-│   │   └── storage/                  # SQLCipher / secure storage wrapper
+│   │   └── storage/                  # Hardware secure storage wrapper (Keychain/KeyStore/SQLCipher)
 │   ├── features/
 │   │   └── <feature-name>/
 │   │       ├── data/
-│   │       │   ├── datasources/      # Remote (REST/gRPC) & Local (SQLCipher)
-│   │       │   ├── models/           # Serialization models (freezed/json_serializable)
+│   │       │   ├── datasources/      # Remote (REST/gRPC) & Local (Encrypted DB)
+│   │       │   ├── models/           # Serialization models & DTOs
 │   │       │   └── repositories/     # Repository implementations
 │   │       ├── domain/
-│   │       │   ├── entities/         # Pure Dart business models
+│   │       │   ├── entities/         # Pure business domain models
 │   │       │   ├── repositories/     # Repository interfaces
 │   │       │   └── usecases/         # Callable business use cases
 │   │       └── presentation/
-│   │           ├── bloc/             # Events, States, BLoC logic
-│   │           ├── pages/            # Top-level screen widgets
-│   │           └── widgets/          # Reusable leaf widgets
-│   └── main.dart
-└── test/
-    ├── unit/                         # Use case & BLoC state transition tests
-    ├── widget/                       # Golden tests & widget interaction tests
-    └── integration/                  # MockWebServer / containerized backend tests
+│   │           ├── state/            # State machines, view-models, event reducers
+│   │           ├── screens/          # Top-level screen views
+│   │           └── components/       # Reusable mobile UI components
+│   └── main.*                        # Application entrypoint
+└── tests/
+    ├── unit/                         # Use case & state machine transition tests
+    ├── ui/                           # Screenshot golden tests & widget/view interaction tests
+    └── integration/                  # Mock server / containerized backend tests
 ```
 
 ### 3. Non-Negotiable Mandates
-- **Encrypted Local Storage**: Sensitive data, tokens, and offline databases must be encrypted using SQLCipher / Keystore / Keychain.
+- **Hardware-Backed Encrypted Storage**: Sensitive data, access tokens, and local offline databases must be encrypted using platform hardware enclaves (iOS Keychain, Android KeyStore, SQLCipher).
 - **Offline-First Synchronization**: Mutating operations must queue securely when offline with idempotent conflict resolution.
-- **Battery & Lifecycle Awareness**: Timers, GPS listeners, and background sync streams must pause on app backgrounding and resume cleanly.
+- **Battery & Lifecycle Awareness**: Timers, location listeners, and background sync streams must pause on app backgrounding and resume cleanly.
 
 ### 4. Forbidden Patterns in Profile C
-- **Business Logic in `StatefulWidget`**: Mutating state directly inside `setState` for complex domain workflows.
-- **Raw Unencrypted SQLite**: Using unencrypted databases for enterprise user data.
-- **Importing `package:flutter` into Domain Layer**: Domain entities and use cases must be pure Dart.
-- **Hardcoded Screen Dimensions**: Bypassing responsive layouts (`LayoutBuilder`, `MediaQuery`).
+- **Business Logic in View Lifecycle**: Mutating domain state directly inside platform view life-cycles or UI widgets.
+- **Raw Unencrypted Local Storage**: Using plaintext SQLite, shared preferences, or unencrypted local storage for user/enterprise data.
+- **UI Framework Imports into Domain Layer**: Domain entities and use cases must be pure language types with zero UI framework imports (`UIKit`, `SwiftUI`, `android.view`, `package:flutter`, `react-native`).
+- **Hardcoded Screen Dimensions**: Bypassing responsive and adaptive layouts across device form factors.
 
 ---
 
@@ -240,6 +244,36 @@ libs/<library-name>/
 - **Purity**: Pure functional transformations and deterministic validation only.
 
 ### 4. Forbidden Patterns in Profile D
-- **Breaking Schema Changes without Version Bump**: Removing fields or altering types without deprecation cycles and major version changes.
-- **Embedding Environment Secrets**: Hardcoding API keys, URLs, or configuration parameters inside shared libraries.
-- **Heavy Framework Dependencies**: Pulling React, Flutter, or ASP.NET into contract packages. Must remain pure and lightweight.
+- **Heavy Framework Dependencies**: Pulling heavy UI or transport frameworks into contract packages. Must remain pure and lightweight.
+
+---
+
+## Universal Structural Boundaries & Anti-Sprawl Rules (All Profiles)
+
+Regardless of whether a project belongs to Profile A, B, C, or D, all AI agents and engineers must observe these strict structural boundaries to prevent file sprawl, cognitive overload, and disorganized codebases:
+
+### 1. File Size Ceilings & Split Heuristics
+- **Soft Target**: $\le 300\text{--}400$ lines of code per file.
+- **Hard Ceiling**: $800$ lines of code per file (excluding machine-generated code, lockfiles, and test snapshots).
+- **Split Mandate**: When a file crosses 400 lines, evaluate separating secondary concerns (e.g., extracting validation schemas, subordinate helper classes, or state machine events). Crossing 800 lines without an accepted ADR is a **blocking defect**.
+
+### 2. Micro-File Fragmentation & Merge Heuristics
+- **The Fragmentation Anti-Pattern**: Agents frequently create excessive 5-to-15 line files (e.g. creating separate files for every trivial value object, single-line DTO, or one-liner domain exception). This leads to directory sprawl and navigation friction.
+- **Co-Location Mandate**:
+  - Small, tightly coupled domain value objects belonging to the same aggregate root must be co-located in the aggregate file or a single cohesive `value_objects.*` file.
+  - A command/query and its immediate handler/DTO pair should be co-located in the same use-case file unless reused across multiple boundaries.
+  - Domain exceptions belonging to a single bounded context should be co-located in `exceptions.*`.
+
+### 3. Directory Depth & Hierarchy Limits
+- **Maximum Nesting Depth**: Directories must never exceed **6 levels of nesting** from the subproject root (e.g. `src/features/billing/data/repositories/postgres/impl/v1/sub/` is strictly rejected).
+- **Flatter is Better**: Organize code by bounded business feature or cohesive architectural layer rather than deep procedural hierarchies.
+
+### 4. Folder File-Count Bounding & Anti-Sprawl
+- **Folder Density Target**: A healthy directory contains between **3 and 25 files**.
+- **Sprawl Ceiling**: Any single folder containing $> 35$ files must be sub-grouped into logical sub-slices (e.g. splitting `components/` into `components/ui/`, `components/navigation/`, `components/feedback/`).
+- **Single-Item Ghost Directories**: Creating a directory that contains only 1 subdirectory that contains only 1 file (e.g. `src/services/billing/impl/default/DefaultBilling.ts`) is an anti-pattern. Collapse unneeded intermediate single-child directories.
+
+### 5. Known Directory Taxonomy (Zero Dumping Grounds)
+All files must reside under declared, semantically meaningful directories matching their profile. The following generic dumping grounds are strictly forbidden:
+- `utils/`, `helpers/`, `common/`, `misc/`, `shared/` (without domain qualification), `temp/`, `scratch/`.
+- Utilities must be placed in a domain-qualified or capability-qualified module (e.g. `src/crypto/`, `src/telemetry/`, `src/formatting/`).

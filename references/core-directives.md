@@ -6,8 +6,8 @@ This specification defines the foundational laws of the `enterprise-product` eng
 
 ## 1. Prime Directives (P1 – P8)
 
-### P1: Single Monorepo Orchestration
-Every enterprise product is strictly contained within a single monorepo governed at the root by **Nx**. Cross-boundary dependencies, project boundaries, and CI/CD task graphs must be declared deterministically. No rogue repositories or detached poly-repo pipelines are permitted.
+### P1: Deterministic Monorepo Orchestration
+Every enterprise product is strictly contained within a single monorepo governed by a deterministic DAG task orchestrator (with **Nx** as the standard reference implementation). Cross-boundary dependencies, project boundaries, and CI/CD task graphs must be declared deterministically. No rogue repositories or detached poly-repo pipelines are permitted.
 
 ### P2: Hierarchical Governance via `AGENT.md`
 Governance cascades strictly from the repository root to project subdirectories:
@@ -15,13 +15,13 @@ $$\text{Enterprise Inviolables} \implies \text{Root AGENT.md} \implies \text{Sub
 Subproject manifests configure local toolchains, build targets, and domain profiles, but can never dilute or override Tier 1 directives.
 
 ### P3: Strict Architectural Boundary Isolation
-Every codebase component must declare and adhere to an approved **Architectural Profile** (Profile A: DDD/Hexagonal, Profile B: Web Clean/SSR, Profile C: Mobile Clean/BLoC, Profile D: Shared Contracts). Domain logic must remain pure, isolated from frameworks, databases, and UI presentation concerns.
+Every codebase component must declare and adhere to an approved **Architectural Profile** (Profile A: Backend DDD/Hexagonal, Profile B: Web Applications, Profile C: Mobile Clients, Profile D: Shared Contracts). Domain logic must remain pure, isolated from frameworks, databases, and UI presentation concerns.
 
 ### P4: Value-Driven & Real-World Testing
-Happy-path-only testing is strictly prohibited. Integration and adapter tests must execute against **real ephemeral containers (Testcontainers/Podman)**; in-memory SQL emulators (e.g., SQLite replacing PostgreSQL/MySQL) are banned. Boundary invariants, race conditions, resilience timeouts, and error paths must be tested.
+Happy-path-only testing is strictly prohibited. Integration and adapter tests must execute against **real ephemeral containers (Testcontainers/Podman)**; engine-substitution emulators (e.g., in-memory SQLite replacing PostgreSQL/MySQL) are banned. (Testing against SQLite is permitted only when SQLite is the actual production engine). Boundary invariants, race conditions, resilience timeouts, and error paths must be tested.
 
 ### P5: Impact Before Implementation (Change Surface)
-No non-trivial modification to code, configuration, or contracts may begin without an approved and mechanically validated **Change Surface** artifact (`CHANGE_SURFACE.md`). Agents must discover the blast radius before altering files.
+No non-trivial modification to code, configuration, or contracts may begin without an approved and mechanically validated **Change Surface** artifact (`CHANGE_SURFACE.md` or `docs/changes/YYYYMMDD-<slug>.md`). Agents must discover the blast radius before altering files.
 
 ### P6: 2-Pass PR Self-Audit & Zero-Drift Gates
 Every Pull Request must undergo a mandatory 2-Pass Self-Audit against the 10-Dimension Enterprise Audit Suite before merge eligibility. Automated squash-merging (`gh pr merge --squash`) is permitted only when 0 blocking defects remain and CI is fully green; otherwise, immediate escalation occurs.
@@ -32,6 +32,20 @@ Ambiguities and missing domain knowledge must not be guessed or invented. They m
 ### P8: Sovereign & Zero-Trust Infrastructure
 Systems prioritize self-hosted, vendor-agnostic infrastructure (Podman, Docker, Kubernetes, PostgreSQL, Redis, MinIO). All data storage, event streaming, and API wire formats must strictly enforce the **UTC Storage Convention** and zero-trust security postures.
 
+### P9: Structural Bounding & Anti-Sprawl Hygiene
+AI agents and developers must maintain disciplined file and folder boundaries. Codebase bloat, hyper-fragmentation into microscopic files, deeply nested hierarchies, and uncohesive dumping grounds are strictly forbidden:
+- **File Size Ceilings**: Files must not exceed 800 lines of code (hard ceiling), with a recommended target of $\le 400$ lines (excluding auto-generated code and lockfiles).
+- **Directory Nesting Depth**: Directories must not exceed 6 levels of nesting from project root.
+- **Micro-File Anti-Fragmentation**: Avoid creating single-class or single-function files with $< 20$ lines when types are tightly cohesive. Co-locate closely related value objects, commands, queries, or helper types within a single cohesive module.
+- **Known Directory Taxonomy**: Code must reside strictly within declared architectural layer directories (`domain/`, `application/`, `infrastructure/`, `components/`, `features/`, etc.). Generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`) are prohibited.
+
+### P10: Zero-Downtime Evolution & Distributed Integrity
+Enterprise products must remain reliable across deployments and distributed boundaries:
+- **Expand/Contract Database Migrations**: Breaking database changes must follow a phased expand/contract pattern. Instant breaking schema alterations during rolling updates are forbidden.
+- **Transactional Outbox for Domain Events**: In distributed architectures, publishing domain events must occur atomically via a transactional outbox table rather than risky dual-write patterns.
+- **Idempotency on Mutating Endpoints**: Mutating API boundaries (POST/PUT/PATCH for billing, orders, money transfer) must support and enforce an `Idempotency-Key` header with TTL caching.
+- **Graceful Shutdown & Drain**: All server processes must trap `SIGTERM`/`SIGINT`, halt accepting inbound traffic, drain active requests within a 15–30s window, and gracefully release database pools.
+
 ---
 
 ## 2. The Tiering Map
@@ -41,43 +55,51 @@ All architectural and engineering rules are categorized into three hierarchical 
 ```text
 ┌────────────────────────────────────────────────────────┐
 │  Tier 1: Enterprise Inviolables (Zero-Overridable)     │
-│  - Nx Root Monorepo       - Podman/Testcontainers Only │
+│  - Monorepo DAG Standard  - Real DB Containers (No Sub)│
 │  - Pure Domain (DDD)      - 2-Pass PR Self-Audit       │
 │  - UTC Storage Convention - 14-Day NC Merge Block      │
+│  - Expand/Contract Rule   - Max Directory Depth ≤ 6    │
 ├────────────────────────────────────────────────────────┤
 │  Tier 2: Strong Defaults (ADR & AGENT.md Justified)    │
 │  - Coverage Targets (≥95% Domain, ≥80% Adapters)       │
-│  - Port-Adapter Separation & Hexagonal Interfaces      │
+│  - File Line Ceiling (≤800 Lines per File)             │
+│  - Port-Adapter Separation & Transactional Outbox      │
 │  - OpenAPI / Protobuf Contract Generation              │
+│  - Idempotency-Key Enforcement on Mutating Boundaries  │
 ├────────────────────────────────────────────────────────┤
 │  Tier 3: Context-Dependent / Advisory (Local Ergonomics)│
 │  - Framework UI component styling / UI state nuance    │
-│  - Internal utility helper structuring                 │
+│  - Internal file co-location grouping decisions        │
 │  - Local dev caching / tooling ergonomics              │
 └────────────────────────────────────────────────────────┘
 ```
 
 ### Tier 1: Enterprise Inviolables (Non-Negotiable)
 These rules cannot be relaxed, bypassed, or overridden by any project, developer, or agent:
-1. **Single Monorepo via Nx**: Root orchestration must manage `lint`, `test`, `build`, and `audit` across all packages.
+1. **Single Monorepo via Deterministic DAG**: Root orchestration manages `lint`, `test`, `build`, and `audit` across all packages.
 2. **Pure Domain Logic**: Domain entities, value objects, and domain services must have zero imports from frameworks, ORMs, transport layers, or external third-party SDKs.
-3. **No In-Memory SQL Emulators**: All relational database queries, transactions, and migration tests must execute against real database engines running in ephemeral Podman/Docker containers.
-4. **Mandatory Change Surface**: No non-trivial implementation without an approved `CHANGE_SURFACE.md`.
+3. **No Engine-Substitution Emulation**: Integration tests must execute against the exact database engine and major version utilized in production via real ephemeral containers (Podman/Testcontainers). Replacing PostgreSQL/MySQL with in-memory SQLite is strictly forbidden.
+4. **Mandatory Change Surface**: No non-trivial implementation without an approved and validated Change Surface.
 5. **UTC Storage Convention**: All database timestamps, queue messages, events, and API payloads must be persisted and exchanged in UTC (ISO 8601 with `Z` or UTC timestamp).
 6. **14-Day NC Merge Block**: Any open `NEED_CLARIFICATION` item older than 14 calendar days mechanically halts automated merges and triggers review escalation.
 7. **2-Pass PR Self-Audit Protocol**: The agent must audit its own diff across both passes and achieve 0 blocking findings before merging.
+8. **Directory Nesting Depth Ceiling**: Directory hierarchy must not exceed 6 levels from project root.
+9. **Zero-Downtime Expand/Contract Migrations**: Destructive database alterations that break rolling blue/green deployments are strictly forbidden.
 
 ### Tier 2: Strong Defaults (Requires ADR & `AGENT.md` Override)
 These are standard enterprise requirements. Deviations are permitted only with an accepted Architecture Decision Record (ADR) and explicit declaration in the subproject's `AGENT.md`:
-1. **Coverage Thresholds**: $\ge 95\%$ Line/Branch coverage for domain packages; $\ge 80\%$ Line coverage for adapters and HTTP handlers. If a project deviates, an ADR must justify the alternative threshold and rationale.
-2. **Contract-First APIs**: External APIs must derive from OpenAPI or Protobuf schemas.
-3. **Strict Hexagonal Isolation**: Use cases access external services through interface ports. (See YAGNI carve-out below).
+1. **Coverage Thresholds**: $\ge 95\%$ Line/Branch coverage for domain packages; $\ge 80\%$ Line coverage for adapters and HTTP handlers.
+2. **File Size Ceiling ($\le 800$ lines)**: Files must remain modular. Files exceeding 800 lines require refactoring or an ADR justifying monolithic grouping (e.g. complex mathematical state machines).
+3. **Transactional Outbox Pattern**: Mutating operations publishing domain events to message brokers must persist events to a transactional outbox table within the same atomic database transaction.
+4. **Contract-First APIs**: External APIs must derive from OpenAPI or Protobuf schemas.
+5. **Idempotency-Key Support**: Critical mutating REST/gRPC endpoints must implement idempotency key tracking.
+6. **Strict Hexagonal Isolation**: Use cases access external services through interface ports. (See YAGNI carve-out below).
 
 ### Tier 3: Context-Dependent / Advisory
 Ergonomic guidelines determined by project teams:
 1. Internal folder structure for UI widgets within component libraries.
-2. Selection of client-side cache utilities (React Query vs SWR) within Profile B applications.
-3. Local development seed script syntax.
+2. Selection of client-side cache utilities (React Query, SWR, TanStack) within Profile B applications.
+3. Local development seed script syntax and test fixtures.
 
 ---
 
@@ -100,3 +122,34 @@ Timezone mishandling is a critical class of enterprise defects:
 2. **In Motion**: All JSON/REST and Protobuf contracts must serialize timestamps in ISO 8601 UTC format: `YYYY-MM-DDTHH:mm:ss.sssZ` or Unix epoch milliseconds UTC.
 3. **In Logic**: Domain calculations must utilize UTC clock ports (`Clock.UtcNow()`). The local timezone of the running server or container is irrelevant and must be treated as `UTC`.
 4. **Presentation**: Conversion to user-local timezone occurs strictly at the edge UI display layer (Profile B or Profile C).
+
+### 3.4 Zero-Downtime Database Migration Protocol (Expand/Contract)
+All schema migrations in enterprise production must follow the Expand/Contract phased lifecycle:
+```text
+┌────────────────────────────────────────────────────────┐
+│ Phase 1: Expand                                        │
+│ - Add new column as NULLABLE or with DEFAULT           │
+│ - Create new tables and non-blocking indexes           │
+├────────────────────────────────────────────────────────┤
+│ Phase 2: Dual-Write (Application Layer)                │
+│ - Application writes to BOTH old and new structures    │
+│ - Application continues reading from old structure     │
+├────────────────────────────────────────────────────────┤
+│ Phase 3: Backfill                                      │
+│ - Asynchronous script backfills old data into new      │
+├────────────────────────────────────────────────────────┤
+│ Phase 4: Read Switch                                   │
+│ - Application switches reads to new structure          │
+├────────────────────────────────────────────────────────┤
+│ Phase 5: Contract (Cleanup)                            │
+│ - Old structure is deprecated, decoupled, then dropped │
+└────────────────────────────────────────────────────────┘
+```
+Direct destructive operations (e.g., dropping or renaming an active column in a single migration) are strictly classified as **blocking defects** during audit.
+
+### 3.5 Structural Anti-Sprawl & File/Folder Bounding Protocol
+To prevent codebase fragmentation and cognitive overhead:
+1. **File Merging & Co-Location**: When defining tightly coupled domain artifacts (e.g. an Aggregate Root and its 2-3 small Value Objects, or a Command and its Response DTO), co-locate them in the same file rather than creating multiple 10-line files.
+2. **File Splitting**: When any file exceeds 400 lines, evaluate splitting into cohesive sub-units. When it exceeds 800 lines, splitting is mandatory unless justified by an ADR.
+3. **Directory Depth Limit**: Deep nesting beyond 6 directory levels (e.g. `src/a/b/c/d/e/f/g/file.ts`) is mechanically rejected. Keep hierarchies flat and cohesive.
+4. **Zero Dumping Grounds**: Folders named `utils`, `helpers`, `misc`, `common`, or `shared-utils` with vague purposes are rejected. Utilities must be categorized by domain or technical concern (e.g. `src/crypto/`, `src/telemetry/`, `src/validation/`).

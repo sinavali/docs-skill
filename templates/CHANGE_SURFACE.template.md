@@ -49,9 +49,13 @@ Every code change must have a corresponding test surface. Happy-path-only tests 
 
 ## 5. Invariants & Non-Negotiables Preserved
 - [ ] Tier 1: Pure domain logic remains 100% free of framework or ORM imports.
-- [ ] Tier 1: No in-memory SQLite mocks used in integration tests (Testcontainers/Podman only).
+- [ ] Tier 1: Real container integration tests (no engine-substitution emulators like SQLite for Postgres).
 - [ ] Tier 1: All stored and wire timestamps use UTC ISO-8601 (`Z`).
-- [ ] Tier 2: Domain test coverage maintains $\ge 95\%$ line & branch coverage.
+- [ ] Tier 1: Directory nesting depth does not exceed 6 levels from project root.
+- [ ] Tier 1: Database migrations follow Expand/Contract pattern for zero-downtime rollout.
+- [ ] Tier 2: Files respect size ceilings ($\le 800$ lines hard, $\le 400$ lines soft); no micro-file sprawl.
+- [ ] Tier 2: Domain test coverage maintains $\ge 95\%$ line & branch coverage; adapters $\ge 80\%$.
+- [ ] Tier 2: Transactional outbox pattern used for domain events published to brokers.
 - [ ] Tier 2: Backward compatibility of existing API contracts preserved.
 
 ## 6. Risk Matrix & Rollback Strategy

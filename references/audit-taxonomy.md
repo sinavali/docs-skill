@@ -29,31 +29,43 @@ Every finding discovered during an audit must be categorized into one of three s
 - **Check 2.2 (Layer Isolation)**: Pure domain entities and use cases must have zero dependencies on infrastructure, ORM, or UI frameworks.
 - **Check 2.3 (Dependency Graph)**: No circular dependencies between modules or packages.
 - **Check 2.4 (Single Responsibility)**: Functions and classes must remain focused; flag "god classes" or sprawling controllers.
+- **Check 2.5 (Directory Nesting Depth Ceiling)**: Maximum directory hierarchy depth must not exceed 6 levels from project root. Flag over-nested paths.
+- **Check 2.6 (File Line Count Ceiling)**: Files must not exceed 800 lines of code (hard limit, excluding auto-generated code and lockfiles). Recommend $\le 400$ lines.
+- **Check 2.7 (Anti-Fragmentation & Co-Location)**: Prohibit hyper-fragmentation into microscopic files ($< 20$ lines) when types are tightly coupled. Co-locate subordinate value objects, DTOs, and domain events.
+- **Check 2.8 (Known Directory Taxonomy)**: All source files must reside within recognized architectural directories (`domain/`, `application/`, `infrastructure/`, `components/`, etc.). Generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`) are strictly flagged.
 
 ### Dimension 3: Fault Tolerance & Resilience
 - **Check 3.1 (Timeout Enforcement)**: Every network request (HTTP, gRPC, DB, Cache) must have an explicit client-side timeout configured.
 - **Check 3.2 (Retry Strategy)**: Retries must apply only to idempotent operations, must incorporate exponential backoff with randomized jitter, and must have a capped retry limit.
 - **Check 3.3 (Circuit Breakers & Fallbacks)**: Critical dependencies must degrade gracefully or trip circuit breakers under sustained failure.
 - **Check 3.4 (Dead Letter Queues)**: Message consumers must handle unprocessable messages via DLQs rather than infinitely crashing or dropping messages silently.
+- **Check 3.5 (Graceful Shutdown & Drain)**: Process must trap `SIGTERM`/`SIGINT`, stop accepting new inbound connections, drain in-flight requests within a 15–30s window, and cleanly terminate connection pools.
 
 ### Dimension 4: Data Integrity & Concurrency
 - **Check 4.1 (Race Conditions & Locking)**: Concurrent state updates must utilize optimistic concurrency control (version checks) or explicit row-level locking.
 - **Check 4.2 (Transaction Boundaries)**: Database mutations spanning multiple tables or aggregate roots must be enclosed within atomic transactions.
 - **Check 4.3 (Idempotent Consumers)**: Event handlers and webhook receivers must track idempotent transaction keys to avoid duplicate processing.
 - **Check 4.4 (UTC Storage)**: All persisted timestamps and wire dates must strictly adhere to the UTC Storage Convention (`TIMESTAMP WITH TIME ZONE` or ISO-8601 UTC with `Z`).
+- **Check 4.5 (Transactional Outbox)**: Domain events emitted during aggregate mutations must be stored to a local database outbox table within the same transaction to guarantee reliable message publishing.
+- **Check 4.6 (Expand/Contract Zero-Downtime Migrations)**: Database schema alterations must follow the expand/contract pattern. Instant breaking renames or non-null columns without defaults that fail rolling deployments are blocking defects.
+- **Check 4.7 (Idempotency Keys on Mutating APIs)**: Mutating business endpoints (payments, orders, billing state) must accept and enforce an `Idempotency-Key` header with TTL deduplication.
 
 ### Dimension 5: Security & Zero-Trust
 - **Check 5.1 (Injection Prevention)**: All SQL/NoSQL queries must use parameterized statements. Zero string concatenation of user input into queries.
 - **Check 5.2 (Authentication & Authorization)**: Every endpoint must verify identity and evaluate granular permission scopes before executing domain logic.
 - **Check 5.3 (Secret Hygiene)**: Zero hardcoded credentials, API keys, private keys, or passwords. All secrets injected via environment variables or secret vaults.
 - **Check 5.4 (Web Security - Profile B)**: Output encoding to prevent XSS, strict Content Security Policy (CSP), anti-CSRF protections, and `SameSite`/`Secure` cookie flags.
-- **Check 5.5 (Data Encryption - Profile C)**: Mobile local caches and tokens must use SQLCipher and platform keychains.
+- **Check 5.5 (Data Encryption - Profile C)**: Mobile local caches and tokens must use hardware-backed encryption (KeyStore/Keychain/SQLCipher).
+- **Check 5.6 (Multi-Tenancy Isolation)**: Queries and tenant data access must enforce tenant context scoping (e.g. Row-Level Security or mandatory `tenant_id` query filters) to prevent cross-tenant data leakage.
+- **Check 5.7 (Supply Chain Security)**: Dependency lockfiles must be immutable and checked in; automated scanning must detect known CVEs in external dependencies.
 
 ### Dimension 6: Observability & Operability
 - **Check 6.1 (Structured Logging)**: Logs must be formatted as structured JSON containing timestamp, severity level, message, and contextual metadata.
 - **Check 6.2 (Distributed Tracing)**: Inbound request trace IDs / correlation IDs must propagate through asynchronous jobs and downstream API calls.
 - **Check 6.3 (Health Probes)**: Applications must expose `/healthz` (liveness) and `/readyz` (readiness) probes assessing critical dependencies.
 - **Check 6.4 (Metrics)**: Critical business operations and error rates must expose OpenTelemetry or Prometheus counters/histograms.
+- **Check 6.5 (PII & Secret Scrubbing)**: Log formatters must automatically redact sensitive fields (passwords, auth tokens, bearer headers, credit cards, emails) before outputting logs.
+- **Check 6.6 (OpenTelemetry Semantic Conventions)**: Spans, metrics, and log attributes must adhere to standard OTel semantic naming conventions.
 
 ### Dimension 7: Contract & Schema Drift
 - **Check 7.1 (Schema Alignment)**: Code implementations must match OpenAPI / Protobuf schemas exactly.

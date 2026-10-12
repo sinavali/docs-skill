@@ -4,6 +4,8 @@ audit-runner.py
 Automated runner and scanner for the 10-Dimension Enterprise Audit Suite.
 Scans source files within a specified scope or diff for common violations,
 computes the scorecard, and scaffolds or verifies AUDIT_REPORT.md.
+Supports structural anti-sprawl bounds (file size, folder depth) and
+brownfield baseline ratchet mode.
 """
 
 import argparse
@@ -12,7 +14,7 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 
 DIMENSIONS = [
@@ -58,7 +60,7 @@ HEURISTIC_RULES = [
         "dim": 4,
         "id": "RULE-4.1-SQLITE-IN-INTEGRATION",
         "severity": "blocking",
-        "description": "Banned in-memory SQL emulator (SQLite/H2) used in integration tests.",
+        "description": "Banned in-memory SQL emulator (SQLite/H2) substituting production database in integration tests.",
         "path_regex": r"(?:integration[\\/]|tests?[\\/].*integration|[._-]integration\.).*\.(ts|js|go|cs|php|py)$",
         "content_regex": r"(:memory:|sqlite3\.connect\(['\"]:memory:['\"]\)|UseSqlite\(|createConnection\(\{.*type:\s*['\"]sqlite['\"])",
     },
@@ -85,6 +87,14 @@ HEURISTIC_RULES = [
         "description": "Direct console.log in production code; prefer structured JSON logging.",
         "path_regex": r"(services|apps)[\\/].*src[\\/].*\.(ts|js)$",
         "content_regex": r"console\.(log|debug)\(",
+    },
+    {
+        "dim": 6,
+        "id": "RULE-6.5-PII-LOGGING",
+        "severity": "blocking",
+        "description": "Unsanitized logging of sensitive PII or credentials detected.",
+        "path_regex": r"(services|apps)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "content_regex": r"(log|logger|console)\.(info|debug|warn|error|log)\([^)]*\b(password|user_password|auth_token|credit_card|secret_key)\b",
     },
     {
         "dim": 8,
@@ -135,16 +145,34 @@ EXCLUDED_DIRS = {
     "__pycache__",
 }
 
+CODE_EXTENSIONS = {
+    ".ts", ".tsx", ".js", ".jsx", ".go", ".cs", ".php", ".py", ".rs", ".dart", ".java", ".kt", ".swift", ".cpp", ".c"
+}
 
-def scan_file_for_violations(file_path: str) -> List[Dict]:
+
+def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[Dict]:
     findings = []
     norm_path = file_path.replace("\\", "/")
+    _, ext = os.path.splitext(norm_path.lower())
     
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
     except Exception:
         return findings
+
+    # Check file size boundary for production source files
+    is_test_file = bool(re.search(r"(\.(spec|test)\.|[\\/]tests?[\\/]|test_)", norm_path, re.IGNORECASE))
+    if ext in CODE_EXTENSIONS and not is_test_file and len(lines) > max_file_lines:
+        findings.append({
+            "dim": 2,
+            "id": "RULE-2.6-FILE-SIZE-CEILING",
+            "severity": "blocking",
+            "description": f"File exceeds maximum line ceiling of {max_file_lines} lines ({len(lines)} lines found). Must be split or modularized.",
+            "file": norm_path,
+            "line": len(lines),
+            "snippet": f"Total line count: {len(lines)}",
+        })
 
     for rule in HEURISTIC_RULES:
         if not re.search(rule["path_regex"], norm_path, re.IGNORECASE):
@@ -166,7 +194,7 @@ def scan_file_for_violations(file_path: str) -> List[Dict]:
     return findings
 
 
-def run_audit(target_dir: str) -> Tuple[List[Dict], Dict]:
+def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6) -> Tuple[List[Dict], Dict]:
     all_findings = []
     
     if os.path.isfile(target_dir):
@@ -175,11 +203,42 @@ def run_audit(target_dir: str) -> Tuple[List[Dict], Dict]:
         files_to_scan = []
         for root, dirs, files in os.walk(target_dir):
             dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS and not d.startswith(".")]
+            
+            # Directory depth & dumping ground check
+            rel_dir = os.path.relpath(root, target_dir)
+            if rel_dir != ".":
+                dir_parts = [p for p in rel_dir.replace("\\", "/").split("/") if p]
+                depth = len(dir_parts)
+                if depth > max_dir_depth:
+                    all_findings.append({
+                        "dim": 2,
+                        "id": "RULE-2.5-OVER-NESTED-DIRECTORY",
+                        "severity": "blocking",
+                        "description": f"Directory hierarchy exceeds maximum depth of {max_dir_depth} (depth {depth} found).",
+                        "file": rel_dir.replace("\\", "/"),
+                        "line": 1,
+                        "snippet": f"Path: {rel_dir}",
+                    })
+                
+                # Check for generic uncohesive dumping grounds
+                for p in dir_parts:
+                    if p.lower() in {"utils", "helpers", "misc", "common"}:
+                        all_findings.append({
+                            "dim": 2,
+                            "id": "RULE-2.8-GENERIC-DUMPING-GROUND",
+                            "severity": "suggestion",
+                            "description": f"Generic dumping ground folder '{p}' detected; categorize utilities by domain capability.",
+                            "file": rel_dir.replace("\\", "/"),
+                            "line": 1,
+                            "snippet": f"Directory: {rel_dir}",
+                        })
+                        break
+
             for f in files:
                 files_to_scan.append(os.path.join(root, f))
                 
     for f in sorted(files_to_scan):
-        all_findings.extend(scan_file_for_violations(f))
+        all_findings.extend(scan_file_for_violations(f, max_file_lines=max_file_lines))
         
     # Tally results
     scorecard = {}
@@ -200,7 +259,32 @@ def run_audit(target_dir: str) -> Tuple[List[Dict], Dict]:
     return all_findings, scorecard
 
 
-def generate_markdown_report(target: str, findings: List[Dict], scorecard: Dict) -> str:
+def filter_against_baseline(findings: List[Dict], baseline_data: List[Dict]) -> Tuple[List[Dict], int]:
+    """
+    Suppresses findings that were already recorded in the baseline snapshot.
+    Enforces the ratchet principle: 0 new blocking defects.
+    """
+    baseline_fingerprints: Set[str] = {
+        f"{b.get('id')}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data
+    }
+    
+    new_findings = []
+    suppressed_count = 0
+    
+    for f in findings:
+        fp = f"{f.get('id')}:{f.get('file')}:{f.get('line', '')}"
+        # Fallback loose fingerprint (id + file)
+        fp_loose = f"{f.get('id')}:{f.get('file')}:"
+        
+        if fp in baseline_fingerprints or any(b.startswith(fp_loose) for b in baseline_fingerprints):
+            suppressed_count += 1
+        else:
+            new_findings.append(f)
+            
+    return new_findings, suppressed_count
+
+
+def generate_markdown_report(target: str, findings: List[Dict], scorecard: Dict, baseline_suppressed: int = 0) -> str:
     total_blocking = sum(s["blocking"] for s in scorecard.values())
     total_suggestion = sum(s["suggestion"] for s in scorecard.values())
     total_nit = sum(s["nit"] for s in scorecard.values())
@@ -214,6 +298,11 @@ def generate_markdown_report(target: str, findings: List[Dict], scorecard: Dict)
         f"**Date**: `{today}`  ",
         "**Auditor**: `audit-runner.py`  ",
         f"**Overall Verdict**: **{verdict}**  ",
+    ]
+    if baseline_suppressed > 0:
+        lines.append(f"**Baseline Ratchet**: `{baseline_suppressed}` pre-existing findings suppressed.  ")
+        
+    lines.extend([
         "",
         "---",
         "",
@@ -221,7 +310,7 @@ def generate_markdown_report(target: str, findings: List[Dict], scorecard: Dict)
         "",
         "| Dimension | Status | Blocking | Suggestions | Nits |",
         "|---|---|---|---|---|",
-    ]
+    ])
     
     for dim_num, dim_name in DIMENSIONS:
         s = scorecard[dim_num]
@@ -267,15 +356,53 @@ def main():
     parser = argparse.ArgumentParser(description="Run 10-dimension enterprise audit suite.")
     parser.add_argument("--scope", default=".", help="Directory or file path to audit (default: .)")
     parser.add_argument("--output", help="Path to save AUDIT_REPORT.md")
+    parser.add_argument("--max-file-lines", type=int, default=800, help="Maximum allowed lines per file (default: 800)")
+    parser.add_argument("--max-dir-depth", type=int, default=6, help="Maximum allowed directory nesting depth (default: 6)")
+    parser.add_argument("--baseline", help="Path to baseline JSON file for ratchet auditing")
+    parser.add_argument("--save-baseline", help="Path to save current findings as baseline JSON")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
     
-    findings, scorecard = run_audit(args.scope)
+    raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth)
+    
+    if args.save_baseline:
+        with open(args.save_baseline, "w", encoding="utf-8") as f:
+            json.dump(raw_findings, f, indent=2)
+        print(f"[INFO] Saved {len(raw_findings)} baseline findings to {args.save_baseline}")
+        sys.exit(0)
+        
+    suppressed_count = 0
+    if args.baseline:
+        if os.path.exists(args.baseline):
+            with open(args.baseline, "r", encoding="utf-8") as f:
+                baseline_data = json.load(f)
+            findings, suppressed_count = filter_against_baseline(raw_findings, baseline_data)
+        else:
+            print(f"[WARNING] Baseline file '{args.baseline}' not found. Auditing without baseline.")
+            findings = raw_findings
+    else:
+        findings = raw_findings
+        
+    # Re-tally scorecard from active findings
+    scorecard = {}
+    for dim_num, dim_name in DIMENSIONS:
+        scorecard[dim_num] = {
+            "name": dim_name,
+            "blocking": 0,
+            "suggestion": 0,
+            "nit": 0,
+        }
+    for finding in findings:
+        dim = finding["dim"]
+        sev = finding["severity"]
+        if dim in scorecard:
+            scorecard[dim][sev] += 1
+            
     total_blocking = sum(s["blocking"] for s in scorecard.values())
     is_pass = total_blocking == 0
     
-    report_md = generate_markdown_report(args.scope, findings, scorecard)
+    report_md = generate_markdown_report(args.scope, findings, scorecard, baseline_suppressed=suppressed_count)
     
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
@@ -287,6 +414,7 @@ def main():
             "scope": args.scope,
             "verdict": "PASS" if is_pass else "FAIL",
             "total_blocking": total_blocking,
+            "baseline_suppressed": suppressed_count,
             "findings": findings,
             "scorecard": scorecard,
         }
