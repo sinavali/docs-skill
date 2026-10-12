@@ -144,6 +144,7 @@ Do not load all reference files simultaneously. Read on demand based on current 
 - `templates/PR_CONTRACT.template.md` — PR description contract and self-audit checklist.
 - `templates/project-target.template.json` — Standardized Nx `project.json` targets.
 - `templates/ci-workflow.template.yml` — GitHub Actions enterprise CI workflow.
+- `templates/pre-commit-config.template.yaml` — Git pre-commit hook configuration for local governance.
 
 ### Verification CLI Tooling (`scripts/` and `scripts/bin/`)
 - `scripts/validate-change-surface.py` — Change Surface schema and completeness validator.
