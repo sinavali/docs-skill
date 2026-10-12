@@ -34,14 +34,19 @@ No non-trivial modification to code, configuration, or contracts is permitted wi
 
 A Change Surface bounds the scope of work, prevents scope creep, and informs reviewers of the exact blast radius.
 
-### 2.1 Change Surface Schema
-Every `CHANGE_SURFACE.md` must declare:
-1. **Metadata**: Title, author/agent, affected date, target branch.
+### 2.1 Change Surface Schema & Storage Paths
+To prevent branch collision across concurrent features, a Change Surface may be stored in one of two supported formats:
+1. **Versioned Archive Path (Recommended)**: `docs/changes/YYYYMMDD-<branch-slug>.md`
+2. **Local Root Staging**: `CHANGE_SURFACE.md` (at repo root, or symlinked)
+3. **PR Embedded Contract**: Formatted directly within the Pull Request description matching `templates/PR_CONTRACT.template.md`.
+
+Every Change Surface must declare:
+1. **Metadata**: Title, author/agent, created date, target branch, risk level.
 2. **Intent & Problem Statement**: Precise business rationale and problem description.
 3. **Affected Projects**: Monorepo packages affected (`apps/*`, `services/*`, `libs/*`) and their Architectural Profiles.
 4. **Code Surface**: Explicit list of files and code symbols (classes, functions, interfaces) targeted for addition or modification.
 5. **Test Surface**: Exact test files and suites verifying the change (Unit, Ephemeral Container Integration, Failure paths).
-6. **Invariants Preserved**: Core business rules and architectural constraints that must remain unbroken.
+6. **Invariants Preserved**: Core business rules and architectural constraints that must remain unbroken (including Tier 1 Inviolables and structural limits).
 7. **Risk Matrix & Rollback Strategy**: Identified risks, blast radius, and recovery plan.
 
 ### 2.2 Mechanical Validation
@@ -50,6 +55,7 @@ The script `scripts/validate-change-surface.py` verifies:
 - Non-empty Code Surface and Test Surface.
 - Existence of affected project references within the monorepo.
 - Prevention of unconstrained wildcards (`*`) without path scoping.
+- Resolves files at root (`CHANGE_SURFACE.md`) or within `docs/changes/`.
 
 ---
 

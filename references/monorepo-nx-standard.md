@@ -1,26 +1,26 @@
-# Monorepo Nx Standard Specification
+# Monorepo Task Orchestration Specification (Nx Reference Standard)
 
-This specification governs the unified orchestration of polyglot codebases using **Nx** as the root engine. All projects—regardless of language or runtime—must conform to standard target contracts to enable deterministic dependency graphs, affected task execution, and distributed caching.
+This specification governs the unified orchestration of polyglot codebases using a deterministic DAG task orchestrator, with **Nx** serving as the standard enterprise reference engine. All projects—regardless of language or runtime—must conform to standard target contracts to enable deterministic dependency graphs, affected task execution, and distributed caching.
 
 ---
 
 ## 1. Monorepo Architecture Overview
 
-Every product repository is a single Nx monorepo. Native package managers (Cargo, Go modules, Composer, NuGet, Pub, PNPM) manage toolchains locally within subprojects, while Nx manages orchestration, task graphs, and CI caching at the root:
+Every product repository is a single monorepo. Native package managers (Cargo, Go modules, Composer, NuGet, Pub, Gradle, Swift Package Manager, PNPM) manage toolchains locally within subprojects, while the root orchestrator (Nx, or compatible DAG engines like Turborepo/Bazel via target adaptation) manages orchestration, task graphs, and CI caching at the root:
 
 ```text
 monorepo-root/
-├── nx.json                           # Root Nx configuration & task pipeline
-├── package.json                      # Root workspace tooling (Nx CLI)
+├── nx.json                           # Root task pipeline configuration
+├── package.json                      # Root workspace tooling
 ├── pnpm-workspace.yaml / pnpm-lock   # Workspace lockfile
 ├── AGENT.md                          # Root Enterprise Governance Manifest
 ├── apps/                             # End-user applications (Web, Mobile, Core APIs)
-│   ├── web-portal/project.json       # Profile B (Next.js / TypeScript)
-│   ├── mobile-client/project.json    # Profile C (Flutter / Dart)
-│   └── order-service/project.json    # Profile A (Go / .NET / PHP)
+│   ├── web-portal/project.json       # Profile B (Web Application)
+│   ├── mobile-client/project.json    # Profile C (Mobile Client)
+│   └── order-service/project.json    # Profile A (Backend Service)
 ├── libs/                             # Shared libraries & contracts
 │   ├── core-contracts/project.json   # Profile D (OpenAPI / Protobuf)
-│   └── domain-types/project.json     # Profile D (Pure TypeScript / C#)
+│   └── domain-types/project.json     # Profile D (Pure Shared Types)
 ```
 
 ---

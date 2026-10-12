@@ -160,12 +160,21 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
-    
-    is_valid, errors = validate_change_surface(args.file, strict=args.strict)
+    target_file = args.file
+    if target_file == "CHANGE_SURFACE.md" and not os.path.exists("CHANGE_SURFACE.md"):
+        if os.path.isdir("docs/changes"):
+            change_files = sorted(
+                [os.path.join("docs/changes", f) for f in os.listdir("docs/changes") if f.endswith(".md")],
+                reverse=True,
+            )
+            if change_files:
+                target_file = change_files[0]
+
+    is_valid, errors = validate_change_surface(target_file, strict=args.strict)
     
     if args.json:
         res = {
-            "file": args.file,
+            "file": target_file,
             "valid": is_valid,
             "errors": errors,
         }

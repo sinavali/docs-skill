@@ -216,6 +216,48 @@ Risk.
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("Invalid risk_level", proc.stdout)
 
+    def test_docs_changes_fallback_resolution(self):
+        docs_changes = os.path.join(self.temp_dir, "docs", "changes")
+        os.makedirs(docs_changes, exist_ok=True)
+        versioned_file = os.path.join(docs_changes, "20261012-feature.md")
+        content = """---
+title: "Versioned Change Surface"
+author: "Engineer"
+created_date: "2026-10-12"
+target_branch: "main"
+risk_level: "LOW"
+affected_projects:
+  - "services/billing"
+---
+# Versioned Change Surface
+## 1. Intent & Business Rationale
+Rationale.
+## 2. Affected Monorepo Projects & Profiles
+| Project | Profile | Responsibility |
+|---|---|---|
+| services/billing | Profile A | Logic |
+## 3. Code Surface
+- `services/billing/index.ts`
+## 4. Test Surface
+- `services/billing/index.spec.ts`
+## 5. Invariants
+Invariants.
+## 6. Risk Matrix
+Risk.
+"""
+        with open(versioned_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "validate-change-surface")],
+            cwd=self.temp_dir,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Expected 0: {proc.stdout} {proc.stderr}")
+        self.assertIn("[SUCCESS]", proc.stdout)
+
+
 
 class TestCheckNcItems(unittest.TestCase):
     def setUp(self):
@@ -690,6 +732,100 @@ class TestAuditRunner(unittest.TestCase):
         found_ids = [f["id"] for f in res["findings"]]
         self.assertIn("RULE-10.2-SKIPPED-TEST", found_ids)
 
+    def test_file_size_ceiling_detected(self):
+        big_file = os.path.join(self.temp_dir, "monolith.ts")
+        with open(big_file, "w", encoding="utf-8") as f:
+            for i in range(850):
+                f.write(f"export const item_{i} = {i};\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-2.6-FILE-SIZE-CEILING", found_ids)
+
+    def test_over_nested_directory_detected(self):
+        deep_dir = os.path.join(self.temp_dir, "l1", "l2", "l3", "l4", "l5", "l6", "l7")
+        os.makedirs(deep_dir, exist_ok=True)
+        deep_file = os.path.join(deep_dir, "deep.ts")
+        with open(deep_file, "w", encoding="utf-8") as f:
+            f.write("export const deep = true;\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-2.5-OVER-NESTED-DIRECTORY", found_ids)
+
+    def test_generic_dumping_ground_detected(self):
+        dump_dir = os.path.join(self.temp_dir, "src", "utils")
+        os.makedirs(dump_dir, exist_ok=True)
+        dump_file = os.path.join(dump_dir, "helper.ts")
+        with open(dump_file, "w", encoding="utf-8") as f:
+            f.write("export const helper = true;\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-2.8-GENERIC-DUMPING-GROUND", found_ids)
+
+    def test_pii_logging_detected(self):
+        services_dir = os.path.join(self.temp_dir, "services", "auth")
+        os.makedirs(services_dir, exist_ok=True)
+        bad_log_file = os.path.join(services_dir, "auth.ts")
+        with open(bad_log_file, "w", encoding="utf-8") as f:
+            f.write("logger.info('Authenticating user', password);\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-6.5-PII-LOGGING", found_ids)
+
+    def test_baseline_ratchet_suppresses_known_issues(self):
+        bad_file = os.path.join(self.temp_dir, "legacy.ts")
+        with open(bad_file, "w", encoding="utf-8") as f:
+            f.write("try { doLegacy(); } catch (e) {}\n")
+
+        baseline_json = os.path.join(self.temp_dir, "baseline.json")
+
+        # 1. Save baseline
+        proc1 = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--save-baseline", baseline_json],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc1.returncode, 0)
+        self.assertTrue(os.path.exists(baseline_json))
+
+        # 2. Run with baseline -> should PASS due to ratchet suppression
+        proc2 = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--baseline", baseline_json, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc2.returncode, 0)
+        res2 = json.loads(proc2.stdout)
+        self.assertEqual(res2["verdict"], "PASS")
+        self.assertEqual(res2["total_blocking"], 0)
+        self.assertGreaterEqual(res2["baseline_suppressed"], 1)
+
     def test_audit_repo_itself_clean(self):
         proc = subprocess.run(
             [str(BIN_DIR / "audit-runner"), "--scope", str(REPO_ROOT), "--json"],
@@ -704,3 +840,4 @@ class TestAuditRunner(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

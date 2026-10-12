@@ -12,20 +12,25 @@
 
 ## Core Tenets
 
-1. **Single Monorepo Standard**: Every product is managed at the root by **Nx** (`nx affected`, project graphs, distributed caching, and standard target contracts across Go, C#, Dart, Rust, PHP, and TypeScript).
+1. **Single Monorepo Standard**: Every product is managed at the root by a deterministic DAG task orchestrator (with **Nx** as reference standard: `nx affected`, project graphs, distributed caching, and standard target contracts across Go, C#, Dart, Swift, Rust, PHP, and TypeScript).
 2. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to per-project `AGENT.md` manifests. Subprojects specialize configuration but cannot override Tier 1 directives.
 3. **Four Architectural Profiles**:
-   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in domain logic.
-   - **Profile B (Frontend & Web Apps)**: Clean Component & State Layering, SSR hydration safety, accessibility (WCAG 2.2 AA), strict bundle budgets.
-   - **Profile C (Mobile Clients - Flutter)**: Clean Architecture + BLoC State Machines, encrypted local storage (SQLCipher), offline-first sync.
+   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in domain logic. Transactional outbox for event publishing.
+   - **Profile B (Web Applications)**: Clean Component & State Layering, SSR/SPA hydration safety, accessibility (WCAG 2.2 AA), strict bundle budgets.
+   - **Profile C (Mobile Clients - Native & Cross-Platform)**: Clean Architecture + Unidirectional State Flow, hardware-backed encrypted storage (Keychain/KeyStore/SQLCipher), offline-first sync.
    - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI 3.1 / Protobuf v3), strict SemVer, zero ambient side-effects.
 4. **Value-Driven Testing Matrix**:
    - Domain logic: $\ge 95\%$ Line and $\ge 95\%$ Branch coverage.
-   - Infrastructure & Adapters: $\ge 80\%$ Line coverage via **real ephemeral containers (Testcontainers/Podman)**; in-memory SQL emulators (e.g. SQLite for PostgreSQL) are strictly forbidden.
-   - UI: Complete state coverage (Loading, Empty, Success, Error).
-5. **Pre-Implementation Change Surface**: No non-trivial code modification is permitted without an approved and mechanically validated `CHANGE_SURFACE.md`.
-6. **2-Pass PR Self-Audit & Merge Protocol**: Mandatory self-auditing across the 10 Enterprise Dimensions. Automated squash-merging (`gh pr merge --squash`) only when 0 blocking defects remain and CI is green; immediate escalation on persistent defects.
-7. **Complete Documentation & NC Protocol**: Ambiguities are recorded as `NEED_CLARIFICATION` (NC) items. Open items older than 14 days mechanically block PR merges.
+   - Infrastructure & Adapters: $\ge 80\%$ Line coverage via **real ephemeral containers (Testcontainers/Podman)**; engine-substitution emulators (e.g. SQLite for PostgreSQL) are strictly forbidden.
+   - UI: Complete 4-state coverage (Loading, Empty, Success, Error).
+5. **Structural Bounding & Anti-Sprawl Hygiene**:
+   - Hard file size ceiling $\le 800$ lines (soft target $\le 400$ lines).
+   - Maximum directory depth $\le 6$ levels from project root.
+   - Co-location of tightly coupled domain artifacts over micro-file fragmentation ($< 20$ lines).
+   - Zero generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`).
+6. **Pre-Implementation Change Surface**: No non-trivial code modification is permitted without an approved and mechanically validated Change Surface (`CHANGE_SURFACE.md` or `docs/changes/`).
+7. **2-Pass PR Self-Audit & Merge Protocol**: Mandatory self-auditing across the 10 Enterprise Dimensions. Automated squash-merging (`gh pr merge --squash`) only when 0 blocking defects remain and CI is green; immediate escalation on persistent defects.
+8. **Complete Documentation & NC Protocol**: Ambiguities are recorded as `NEED_CLARIFICATION` (NC) items. Open items older than 14 days mechanically block PR merges. Expand/Contract zero-downtime database migrations.
 
 ---
 
