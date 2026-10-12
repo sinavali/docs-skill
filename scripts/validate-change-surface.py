@@ -86,6 +86,10 @@ def parse_frontmatter(content: str) -> Tuple[Dict, str]:
             if v == "" or v == "[]":
                 data[k] = []
                 current_list_key = k
+            elif v.startswith("[") and v.endswith("]"):
+                inner = v[1:-1].strip()
+                data[k] = [item.strip().strip("\"'") for item in inner.split(",") if item.strip()]
+                current_list_key = None
             else:
                 data[k] = v
                 current_list_key = None
@@ -125,7 +129,7 @@ def validate_change_surface(file_path: str, strict: bool = False) -> Tuple[bool,
             errors.append(f"Invalid risk_level '{risk}'. Must be one of: {', '.join(sorted(ALLOWED_RISK_LEVELS))}")
             
         affected = frontmatter.get("affected_projects")
-        if isinstance(affected, list) and len(affected) == 0:
+        if not isinstance(affected, list) or len(affected) == 0:
             errors.append("Frontmatter 'affected_projects' list must contain at least one project.")
 
     # 2. Section validation
@@ -139,7 +143,10 @@ def validate_change_surface(file_path: str, strict: bool = False) -> Tuple[bool,
         code_surface_text = code_surface_match.group(1)
         if re.search(r"(?:^|\n)\s*[-*]?\s*[`]?\*[`]?\s*(?:\n|$)", code_surface_text):
             errors.append("Code Surface contains unconstrained bare wildcard '*' which is forbidden.")
-        if not any(marker in code_surface_text for marker in ["- `", "* `", "### Added", "### Modified"]):
+        has_symbol_marker = bool(
+            re.search(r"(?:[-*]|\d+\.)\s*`|###\s*(Added|Modified)", code_surface_text)
+        )
+        if not has_symbol_marker:
             errors.append("Code Surface does not list explicit files or symbol targets.")
 
     # 4. Strict placeholder check

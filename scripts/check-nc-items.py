@@ -178,6 +178,13 @@ def audit_nc_items(
         age_days = (as_of_date - created_date).days
         item["age_days"] = max(0, age_days)
 
+        if status == "RESOLVED":
+            resolved_str = item.get("resolved_date")
+            if not resolved_str:
+                errors.append(f"{nc_id} ({item['file_path']}): Status is RESOLVED but missing required 'resolved_date'.")
+            elif not parse_date(resolved_str):
+                errors.append(f"{nc_id} ({item['file_path']}): Status is RESOLVED but has invalid 'resolved_date' '{resolved_str}'.")
+
         if status == "OPEN":
             open_items.append(item)
             if age_days >= max_age_days:
@@ -215,15 +222,17 @@ def main():
 
     ref_date = None
     if args.as_of_date:
-        try:
-            ref_date = datetime.date.fromisoformat(args.as_of_date)
-        except ValueError:
-            print(f"[ERROR] Invalid --as-of-date '{args.as_of_date}'. Expected YYYY-MM-DD.", file=sys.stderr)
+        ref_date = parse_date(args.as_of_date)
+        if not ref_date:
+            print(f"[ERROR] Invalid --as-of-date '{args.as_of_date}'. Expected valid date (YYYY-MM-DD or YYYY/MM/DD).", file=sys.stderr)
             sys.exit(2)
 
     # If default dir doesn't exist, try scanning root docs or current dir
     target_dir = args.dir
     if not os.path.exists(target_dir):
+        if args.dir != "docs/nc":
+            print(f"[ERROR] Specified directory '{args.dir}' does not exist.", file=sys.stderr)
+            sys.exit(1)
         if os.path.exists("docs"):
             target_dir = "docs"
         else:

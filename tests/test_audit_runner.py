@@ -254,5 +254,74 @@ class TestAuditRunner(unittest.TestCase):
         self.assertEqual(res["total_blocking"], 0)
 
 
+    def test_nonexistent_scope_fails(self):
+        nonexistent = os.path.join(self.temp_dir, "does_not_exist")
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", nonexistent],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist", proc.stderr)
+
+    def test_binary_files_skipped(self):
+        png_file = os.path.join(self.temp_dir, "asset.png")
+        with open(png_file, "wb") as f:
+            f.write(b"SELECT * FROM users; catch () {}")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        self.assertEqual(len(res["findings"]), 0)
+
+    def test_dummy_secret_exempted(self):
+        service_file = os.path.join(self.temp_dir, "auth.ts")
+        with open(service_file, "w", encoding="utf-8") as f:
+            f.write("export const apiKey = 'mock_secret_key_12345678901234';\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertNotIn("RULE-5.1-HARDCODED-SECRET", found_ids)
+
+    def test_unbounded_scan_without_semicolon(self):
+        apps_dir = os.path.join(self.temp_dir, "apps", "api")
+        os.makedirs(apps_dir, exist_ok=True)
+        query_file = os.path.join(apps_dir, "repo.ts")
+        with open(query_file, "w", encoding="utf-8") as f:
+            f.write("const q = \"SELECT * FROM users\";\n")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        res = json.loads(proc.stdout)
+        found_ids = [f["id"] for f in res["findings"]]
+        self.assertIn("RULE-1.1-UNBOUNDED-SCAN", found_ids)
+
+    def test_corrupted_baseline_handled_gracefully(self):
+        bad_baseline = os.path.join(self.temp_dir, "corrupt.json")
+        with open(bad_baseline, "w", encoding="utf-8") as f:
+            f.write("NOT_VALID_JSON{{{")
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "audit-runner"), "--scope", self.temp_dir, "--baseline", bad_baseline, "--json"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("Failed to parse baseline", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

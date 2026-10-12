@@ -257,5 +257,119 @@ Risk.
         self.assertIn("20261012-feature.md", proc.stdout)
 
 
+    def test_numbered_list_in_code_surface(self):
+        file_path = os.path.join(self.temp_dir, "CHANGE_SURFACE.md")
+        content = """---
+title: "Numbered Code Surface"
+author: "Engineer"
+created_date: "2026-10-12"
+target_branch: "main"
+risk_level: "LOW"
+affected_projects:
+  - "services/billing"
+---
+# Numbered Code Surface
+## 1. Intent & Business Rationale
+Rationale.
+## 2. Affected Monorepo Projects & Profiles
+| Project | Profile | Responsibility |
+|---|---|---|
+| services/billing | Profile A | Logic |
+## 3. Code Surface
+1. `services/billing/index.ts`
+2. `services/billing/model.ts`
+## 4. Test Surface
+- `services/billing/index.spec.ts`
+## 5. Invariants
+Invariants.
+## 6. Risk Matrix
+Risk.
+"""
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "validate-change-surface"), file_path],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Expected 0: {proc.stdout} {proc.stderr}")
+        self.assertIn("[SUCCESS]", proc.stdout)
+
+    def test_inline_bracket_list_in_affected_projects(self):
+        file_path = os.path.join(self.temp_dir, "CHANGE_SURFACE.md")
+        content = """---
+title: "Inline List Surface"
+author: "Engineer"
+created_date: "2026-10-12"
+target_branch: "main"
+risk_level: "LOW"
+affected_projects: ["services/order", "services/user"]
+---
+# Inline List Surface
+## 1. Intent & Business Rationale
+Rationale.
+## 2. Affected Monorepo Projects & Profiles
+| Project | Profile | Responsibility |
+|---|---|---|
+| services/order | Profile A | Logic |
+## 3. Code Surface
+- `services/order/index.ts`
+## 4. Test Surface
+- `services/order/index.spec.ts`
+## 5. Invariants
+Invariants.
+## 6. Risk Matrix
+Risk.
+"""
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "validate-change-surface"), file_path],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Expected 0: {proc.stdout} {proc.stderr}")
+        self.assertIn("[SUCCESS]", proc.stdout)
+
+    def test_empty_affected_projects_fails(self):
+        file_path = os.path.join(self.temp_dir, "CHANGE_SURFACE.md")
+        content = """---
+title: "Empty Projects Surface"
+author: "Engineer"
+created_date: "2026-10-12"
+target_branch: "main"
+risk_level: "LOW"
+affected_projects: []
+---
+# Empty Projects Surface
+## 1. Intent & Business Rationale
+Rationale.
+## 2. Affected Monorepo Projects & Profiles
+| Project | Profile | Responsibility |
+|---|---|---|
+| services/order | Profile A | Logic |
+## 3. Code Surface
+- `services/order/index.ts`
+## 4. Test Surface
+- `services/order/index.spec.ts`
+## 5. Invariants
+Invariants.
+## 6. Risk Matrix
+Risk.
+"""
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "validate-change-surface"), file_path],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("must contain at least one project", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

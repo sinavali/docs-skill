@@ -183,9 +183,10 @@ def verify_agent_manifest(
             if not adr:
                 errors.append(f"Tier override '{rule}' is missing required 'adr_reference'.")
             elif check_adrs:
-                # Check ADR file path relative to root or relative to manifest directory
-                path_from_root = os.path.join(root_dir, adr)
-                path_from_manifest = os.path.join(os.path.dirname(file_path), adr)
+                # Strip leading slashes so os.path.join does not discard root_dir
+                clean_adr = adr.lstrip("/\\")
+                path_from_root = os.path.join(root_dir, clean_adr)
+                path_from_manifest = os.path.join(os.path.dirname(file_path), clean_adr)
                 if not (os.path.exists(path_from_root) or os.path.exists(path_from_manifest)):
                     errors.append(f"Referenced ADR file does not exist: '{adr}'")
 
@@ -205,6 +206,10 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
 
     args = parser.parse_args()
+
+    if not os.path.exists(args.root):
+        print(f"[ERROR] Specified root directory '{args.root}' does not exist.", file=sys.stderr)
+        sys.exit(1)
 
     agent_files = find_agent_files(args.root)
     results = {}
