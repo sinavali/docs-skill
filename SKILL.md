@@ -1,114 +1,149 @@
 ---
-name: docs
-purpose: Manage product documentation that constrains AI agents, with impact analysis for reliable change discovery.
+name: enterprise-product
+description: Supreme enterprise gatekeeper and engineering operating system for polyglot monorepos. Enforces production-grade rigor, DDD/Hexagonal architecture, Nx orchestration, 10-dimension audits, value-driven testing, Change Surfaces, and 2-Pass PR self-audits.
 ---
 
-# Skill — `docs`
+# Skill — `enterprise-product`
 
-An installable, pure-Markdown skill for managing product documentation that
-constrains AI agents to a product's intent.
+The **supreme enterprise gatekeeper and engineering operating system** for polyglot monorepos. This skill enforces production-grade rigor, mechanical compliance, and zero-compromise engineering standards. It forbids AI agents from taking unverified shortcuts and mandates strict verification gates before any work is considered done.
 
-This skill implements the **AI-Driven Product Documentation Guideline** and an
-**impact-analysis layer** that turns a change request into a bounded Change Surface
-before any code is written.
+---
 
-## Entry Point
+## 1. Core Operating Principles
 
-The agent always loads `SKILL.md` first. All other files load on demand.
+1. **Monorepo Standard**: Every product is strictly a single monorepo governed at the root by **Nx** (`nx affected`, target delegations, dependency graph validation).
+2. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to project-level `AGENT.md` files. Subprojects specialize configuration but can never violate Tier 1 directives.
+3. **Architectural Profiles**:
+   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in pure domain logic.
+   - **Profile B (Frontend & Web Apps)**: Clean Component & State Layering, SSR hydration safety, strict accessibility (WCAG 2.2 AA), bundle budgets, zero-trust web security.
+   - **Profile C (Mobile Clients - Flutter)**: Clean Architecture + State Machine isolation (BLoC/Notifier), encrypted local storage (SQLCipher), offline-first sync, battery/lifecycle awareness.
+   - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI/Protobuf), strict SemVer, zero ambient side-effects.
+4. **Value-Driven Testing Matrix**:
+   - Domain logic: $\ge 95\%$ line & branch coverage.
+   - Adapters & Infrastructure: $\ge 80\%$ line coverage with **real ephemeral containers (Testcontainers/Podman)**; in-memory SQL mocks are strictly prohibited.
+   - Mandatory test types: Domain/Unit, Integration, Contract, Failure/Resilience (timeouts, circuit breakers), Concurrency/Race conditions.
+5. **Pre-Implementation Change Surface**: Non-trivial modifications require a declared `Change Surface` artifact before code changes begin.
+6. **2-Pass PR Self-Audit & Automated Merge Protocol**:
+   - Pass 1: Full diff audit against enterprise checklist ➔ Apply fixes ➔ Commit ➔ Push.
+   - Pass 2: Cumulative diff re-audit + CI verification. If 0 blocking defects and CI is green ➔ `gh pr merge --squash`. Escalates to human review on persistent defects or branch protection requirements.
+7. **Complete Documentation & NC Protocol**:
+   - Ambiguities are recorded as formal `NEED_CLARIFICATION` (NC) items. Open NC items older than 14 days mechanically block merges.
+   - ADRs for all architectural modifications.
 
-## Load-On-Demand
+---
 
-- Load a mode file only when that mode is active.
-- Load a rule file only when a mode references it and the task needs it.
-- Load a template only when producing a file of that kind.
-- Never load the whole skill into context.
+## 2. Operational Modes
 
-## The Three Layers
+Agents operate under one of five distinct modes. When invoked, determine or declare the active mode:
 
-```text
-1. DOCUMENTATION GRAPH   domains / flows / docs / typed relations
-2. CODE SURFACE          docs -> directories/files (code_paths, test_paths)
-3. CODE REFERENCES       grep / LSP / compiler, only when needed
-```
+| Mode | Purpose | Modifies Files | Required Pre-condition |
+|---|---|---|---|
+| `plan` | Analyzes task, traces impact graph, generates & validates `Change Surface` artifact. | Yes (`CHANGE_SURFACE.md`) | Task request received. |
+| `implement` | Executes TDD implementation according to Architectural Profile and testing matrix. | Yes (Code & Tests) | Validated `Change Surface` exists. |
+| `audit` | Runs the 10-Dimension Enterprise Audit across affected projects; outputs audit report. | Yes (`AUDIT_REPORT.md`) | Code implementation completed. |
+| `verify` | Runs mechanical scripts: Nx target checks, Change Surface validation, NC aging check, AGENT.md linting. | No | Staged or committed changes. |
+| `pr-audit` | Executes 2-Pass PR Self-Audit protocol, verifies CI, merges or escalates. | Yes (Fix commits / PR) | PR created or ready to push. |
 
-Descend only when the task requires it. This preserves progressive disclosure.
+---
 
-## Modes
+## 3. Mode Execution Workflows
 
-| Mode | Purpose | Modifies files |
-|---|---|---|
-| `read` | Load only the sections the task needs, following the impact graph for changes. | no |
-| `index` | Discover topology, metadata, and relationships. Produce a compact semantic index. | no |
-| `impact` | Turn a change request into a Change Surface. | no |
-| `validate` | Check tree and graph integrity. Report only. | no |
-| `extend` | Add a doc or section, with mandatory impact metadata. | yes |
-| `init` | Scaffold a fresh product docs tree. | yes |
-| `repair` | Fix an existing docs tree losslessly. | yes |
+### Mode: `plan`
+1. Load `references/documentation-system.md` and `templates/CHANGE_SURFACE.template.md`.
+2. Inspect the request to identify affected monorepo projects (`project.json`), domain entities, APIs, and infrastructure.
+3. If any business requirement or contract ambiguity is identified, record a formal NC item using `templates/NEED_CLARIFICATION.template.md` (see `references/nc-protocol.md`). Do not invent unverified assumptions.
+4. Draft the Change Surface artifact covering:
+   - Problem statement and explicit business intent.
+   - Affected Projects and Architectural Profile mappings.
+   - Code Surface: Exact file paths and symbols targeted for modification.
+   - Test Surface: Unit, integration (ephemeral containers), failure, and contract test suites.
+   - Invariants and non-negotiables preserved.
+   - Risk matrix and rollback strategy.
+5. Run `python3 scripts/validate-change-surface.py <path_to_change_surface>` to verify structural compliance.
 
-## Modes — Order for a Change
+### Mode: `implement`
+1. Read the approved `Change Surface` and the relevant project's `AGENT.md`.
+2. Load `references/architectural-profiles.md` and `references/testing-matrix.md`.
+3. Follow strict Test-Driven Development (TDD):
+   - Step A: Author red tests in the designated Test Surface (domain invariants, failure edge cases).
+   - Step B: Implement pure domain entities and use cases (Profile A/B/C/D rules apply).
+   - Step C: Implement adapters and infrastructure using real containerized integrations (Podman/Testcontainers).
+   - Step D: Ensure all timestamps are UTC, all external boundaries use typed contracts, and zero mock databases are used for integration tests.
+4. Run project test suite via `nx test <project>` and linters via `nx lint <project>`.
 
-```text
-impact  ->  Change Surface  ->  (coder)  ->  diff  ->  (reviewer)
-```
+### Mode: `audit`
+1. Load `references/audit-taxonomy.md` and `templates/AUDIT_REPORT.template.md`.
+2. Execute the 10-Dimension Enterprise Audit across the target diff or affected projects:
+   - Dimension 1: Scalability & Capacity
+   - Dimension 2: Structural Maintainability & Modularity
+   - Dimension 3: Fault Tolerance & Resilience
+   - Dimension 4: Data Integrity & Concurrency
+   - Dimension 5: Security & Zero-Trust
+   - Dimension 6: Observability & Operability
+   - Dimension 7: Contract & Schema Drift
+   - Dimension 8: Code Quality & Typing Strictness
+   - Dimension 9: Documentation & Spec Drift
+   - Dimension 10: Test Fidelity & Assertion Quality
+3. Classify all findings strictly: `blocking` (must resolve before PR), `suggestion`, or `nit`.
+4. Run `python3 scripts/audit-runner.py --scope <project-or-diff>` to scaffold and record findings.
 
-- The orchestrator runs `impact`.
-- The coder implements the declared surface.
-- The reviewer verifies coverage against the surface and may mark it incomplete,
-  returning control to the orchestrator.
+### Mode: `verify`
+1. Run mechanical validation tooling:
+   - `python3 scripts/verify-nx-targets.py`: Verifies every project in the monorepo defines the required standard Nx targets (`lint`, `test`, `build`, `audit`).
+   - `python3 scripts/verify-agent-manifests.py`: Verifies syntax and inheritance of all `AGENT.md` files.
+   - `python3 scripts/check-nc-items.py --max-age 14`: Scans all open NC items and flags any items $\ge 14$ days old as blocking.
+   - `python3 scripts/validate-change-surface.py`: Validates active Change Surface artifact.
+2. Halt if any mechanical check fails.
 
-## Rules
+### Mode: `pr-audit`
+1. Load `references/vcs-pr-protocol.md`.
+2. **Push & PR Initiation**: Push feature branch `feat/<scope>-<desc>` or `fix/<scope>-<desc>` and create PR with `templates/PR_CONTRACT.template.md`.
+3. **Pass 1 (Full Diff Self-Audit)**:
+   - Inspect the entire cumulative diff (`git diff origin/main...HEAD`).
+   - Audit against the 10 dimensions and `PR_CONTRACT.md` checklist.
+   - If any defects (blocking or quality regressions) are found, apply code fixes immediately, run `nx affected --target=test`, commit with descriptive Conventional Commit, and push.
+4. **Pass 2 (Cumulative Diff Re-Audit & Verification)**:
+   - Re-inspect cumulative diff.
+   - Run full CI verification: `nx affected --target=lint && nx affected --target=test && nx affected --target=build`.
+   - Run `python3 scripts/check-nc-items.py --block-on-open-aged`.
+   - If **0 blocking defects** and CI is fully green:
+     - If repository allows automated merge and no branch protection blocker exists: execute `gh pr merge --squash --delete-branch`.
+   - **Escalation Gate**: If defects remain after Pass 2, CI is red, or external human review is mandated by branch protection, immediately halt, post the audit failure report to the PR, and attach the label `needs/review`.
 
-| Rule | Purpose |
-|---|---|
-| `rules/frontmatter.md` | Required and optional fields, including impact metadata. |
-| `rules/numbering.md` | 3-digit accumulation, gaps, insertion, stable doc IDs. |
-| `rules/sectioning.md` | Sectioning doctrine: threshold, recursion, practical boundaries. |
-| `rules/file-level.md` | Sibling `<filename>.md` discovery. |
-| `rules/precedence.md` | Conflict resolution order. |
-| `rules/nc.md` | NEED_CLARIFICATION lifecycle and schema. |
-| `rules/excluded-paths.md` | Default exclusion list and re-inclusion. |
-| `rules/relationships.md` | Typed relationship model. |
-| `rules/impact.md` | Change Surface and impact analysis. |
-| `rules/index-format.md` | Semantic routing map and global map. |
-| `rules/graph.md` | Generated graph artifacts and the docs-map tool. |
+---
 
-## Templates
+## 4. Reference Index & Progressive Disclosure
 
-| Template | Kind |
-|---|---|
-| `templates/agent.md` | `AGENT.md` |
-| `templates/index.md` | Directory routing `INDEX.md` |
-| `templates/index-global.md` | Global `docs/INDEX.md` map |
-| `templates/section.md` | Section file |
-| `templates/contract.md` | Contract doc |
-| `templates/decision.md` | Decision doc |
-| `templates/cross-cutting.md` | Cross-cutting doc |
-| `templates/runbook.md` | Operational doc |
-| `templates/flow.md` | Cross-domain flow doc |
-| `templates/change-surface.md` | Change Surface artifact |
-| `templates/nc-item.md` | NEED_CLARIFICATION item |
+Do not load all reference files simultaneously. Read on demand based on current mode:
 
-## Commands and Companion Tools
+- `references/core-directives.md` — Prime Directives P1–P8, Tier 1/2/3 Master Rulebook, UTC conventions, self-hosted preferences.
+- `references/architectural-profiles.md` — Deep profiles for Backend (DDD/Hexagonal), Web (Next/Nuxt), Mobile (Flutter), Shared Contracts.
+- `references/monorepo-nx-standard.md` — Root Nx orchestration, project.json contracts, target delegation.
+- `references/agent-hierarchy-spec.md` — AGENT.md schema, cascading inheritance, overrides vs invariants.
+- `references/audit-taxonomy.md` — 10-Dimension Audit Guide, verification steps, scoring.
+- `references/testing-matrix.md` — Value-driven testing rules, testcontainers, failure testing, coverage gates.
+- `references/vcs-pr-protocol.md` — GitHub Flow, Conventional Commits, 2-Pass PR Self-Audit algorithm.
+- `references/documentation-system.md` — Change Surface lifecycle, ADRs, file-level docs, doc drift checks.
+- `references/nc-protocol.md` — NEED_CLARIFICATION schema, lifecycle, 14-day escalation mechanics.
 
-| Path | Purpose |
-|---|---|
-| `commands/change.md` | `/change` entry point that runs the impact workflow. |
-| `skills/change-impact/SKILL.md` | Discovery-only project skill for impact analysis. |
-| `tools/docs-map/` | Node CLI that generates and queries the documentation graph. |
+---
 
-## Failure Behavior
+## 5. Templates & Script Tooling Index
 
-- Missing required doc -> NC item, do not invent.
-- Same-level conflict -> NC item, stop.
-- Missing `AGENT.md` -> treat repo root as org-root, NC item.
-- Missing impact metadata on a code-governing doc -> validate warning.
-- Broken graph edge -> validate error.
+### Templates (`templates/`)
+- `templates/CHANGE_SURFACE.template.md` — Pre-implementation Change Surface template.
+- `templates/NEED_CLARIFICATION.template.md` — NC item definition template.
+- `templates/ADR.template.md` — Architecture Decision Record template.
+- `templates/AGENT.template.md` — Per-project AGENT.md manifest template.
+- `templates/AUDIT_REPORT.template.md` — Multi-dimensional audit output template.
+- `templates/PR_CONTRACT.template.md` — PR description contract and self-audit checklist.
+- `templates/project-target.template.json` — Standardized Nx `project.json` targets.
+- `templates/ci-workflow.template.yml` — GitHub Actions enterprise CI workflow.
 
-## Core Principles
-
-- **Docs lead, code follows.**
-- **Two audiences, two files:** `README.md` for humans, `AGENT.md` for agents.
-- **Breadth of metadata, narrowness of content.** Discover broadly, load narrowly.
-- **Ambiguity is recorded, not invented.** Every gap becomes an NC item.
-- **No versions, no status, no changelog.** VCS is the version store.
-- **Impact before implementation.** No non-trivial change without a Change Surface.
+### Verification CLI Tooling (`scripts/` and `scripts/bin/`)
+- `scripts/validate-change-surface.py` — Change Surface schema and completeness validator.
+- `scripts/check-nc-items.py` — NC item parser, age tracker, and 14-day merge blocking detector.
+- `scripts/audit-runner.py` — Automated 10-dimension audit scaffold and runner.
+- `scripts/verify-nx-targets.py` — Standard Nx target validator across all `project.json` files.
+- `scripts/verify-agent-manifests.py` — Schema validator and inheritance checker for `AGENT.md`.
+- `scripts/bin/` — Executable wrapper binaries for all validation scripts.

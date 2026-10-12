@@ -1,7 +1,23 @@
-# Generated documentation graph (derived from Markdown frontmatter)
-.qwen/docs-index/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
 
-# OS / editor
+# Monorepo / Nx
+.nx/
+node_modules/
+dist/
+coverage/
+
+# OS / Editor
 .DS_Store
 Thumbs.db
 *.swp
+*.swo
+*~
+.idea/
+.vscode/
