@@ -54,15 +54,23 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-    except Exception:
-        return None
+    except Exception as e:
+        return {"file_path": file_path, "parse_error": f"Failed to read file: {e}"}
 
     stripped_content = content.lstrip("\ufeff \t\r\n")
+    norm_path = file_path.replace("\\", "/")
+    basename = os.path.basename(norm_path)
+    is_nc_designated = basename.upper().startswith("NC-") or "/docs/nc/" in norm_path or norm_path.startswith("docs/nc/")
+
     if not stripped_content.startswith("---"):
+        if is_nc_designated:
+            return {"file_path": file_path, "parse_error": "Missing YAML frontmatter block (enclosed in ---)."}
         return None
 
     parts = stripped_content.split("---", 2)
     if len(parts) < 3:
+        if is_nc_designated:
+            return {"file_path": file_path, "parse_error": "Unclosed YAML frontmatter block."}
         return None
 
     yaml_text = parts[1].strip()
@@ -100,8 +108,13 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
                 data[k] = v
                 current_list_key = None
 
-    nc_id = str(data.get("id", ""))
-    if not nc_id.startswith("NC-") or any(p in nc_id.upper() for p in ["YYYY", "XXXX", "TEMPLATE", "["]):
+    nc_id = str(data.get("id", "")).strip()
+    if any(p in nc_id.upper() for p in ["YYYY", "XXXX", "TEMPLATE", "["]):
+        return None
+
+    if not nc_id.upper().startswith("NC-"):
+        if is_nc_designated:
+            return {"file_path": file_path, "parse_error": f"Missing or invalid NC ID ('{nc_id}'). Expected format: 'NC-YYYYMMDD-XXX'."}
         return None
 
     return data
@@ -141,6 +154,10 @@ def audit_nc_items(
     errors = []
 
     for item in items:
+        if "parse_error" in item:
+            errors.append(f"{item['file_path']}: {item['parse_error']}")
+            continue
+
         nc_id = item.get("id", "UNKNOWN")
         status = str(item.get("status", "OPEN")).upper()
         created_str = item.get("created_date")

@@ -181,9 +181,9 @@ def main():
         print(json.dumps(res, indent=2))
     else:
         if is_valid:
-            print(f"[SUCCESS] Change Surface '{args.file}' is structurally valid and complete.")
+            print(f"[SUCCESS] Change Surface '{target_file}' is structurally valid and complete.")
         else:
-            print(f"[ERROR] Change Surface '{args.file}' failed validation with {len(errors)} error(s):")
+            print(f"[ERROR] Change Surface '{target_file}' failed validation with {len(errors)} error(s):")
             for err in errors:
                 print(f"  - {err}")
                 

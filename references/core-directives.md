@@ -4,7 +4,7 @@ This specification defines the foundational laws of the `enterprise-product` eng
 
 ---
 
-## 1. Prime Directives (P1 – P8)
+## 1. Prime Directives (P1 – P10)
 
 ### P1: Deterministic Monorepo Orchestration
 Every enterprise product is strictly contained within a single monorepo governed by a deterministic DAG task orchestrator (with **Nx** as the standard reference implementation). Cross-boundary dependencies, project boundaries, and CI/CD task graphs must be declared deterministically. No rogue repositories or detached poly-repo pipelines are permitted.
