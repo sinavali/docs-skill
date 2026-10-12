@@ -180,5 +180,57 @@ Tests.
         self.assertIn("Missing required YAML frontmatter", proc.stdout)
 
 
+    def test_nonexistent_root_fails(self):
+        nonexistent = os.path.join(self.temp_dir, "does_not_exist")
+        proc = subprocess.run(
+            [str(BIN_DIR / "verify-agent-manifests"), "--root", nonexistent],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist", proc.stderr)
+
+    def test_leading_slash_adr_reference_resolves(self):
+        adr_dir = os.path.join(self.temp_dir, "docs", "adr")
+        os.makedirs(adr_dir, exist_ok=True)
+        adr_file = os.path.join(adr_dir, "0099.md")
+        with open(adr_file, "w", encoding="utf-8") as f:
+            f.write("# ADR 99\n")
+
+        sub_dir = os.path.join(self.temp_dir, "services", "slash-adr")
+        os.makedirs(sub_dir, exist_ok=True)
+        agent_file = os.path.join(sub_dir, "AGENT.md")
+        content = """---
+project_name: "slash-adr"
+profile: "A"
+stack: "node"
+scope: "backend"
+tier_overrides:
+  - rule: "coverage-threshold"
+    adr_reference: "/docs/adr/0099.md"
+---
+
+# Service
+## 1. Scope & Business Intent
+Scope.
+## 2. Architectural Profile
+Profile.
+## 3. Local Nx Target
+Target.
+## 4. Test & Verification
+Tests.
+"""
+        with open(agent_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [str(BIN_DIR / "verify-agent-manifests"), "--root", self.temp_dir],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Expected 0: {proc.stdout} {proc.stderr}")
+        self.assertIn("[PASS]", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

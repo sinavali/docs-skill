@@ -94,7 +94,11 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
-    
+
+    if not os.path.exists(args.root):
+        print(f"[ERROR] Specified root directory '{args.root}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
     project_files = find_project_json_files(args.root)
     
     results = {}

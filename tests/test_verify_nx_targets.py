@@ -115,5 +115,16 @@ class TestVerifyNxTargets(unittest.TestCase):
         self.assertEqual(res["total_errors"], 0)
 
 
+    def test_nonexistent_root_fails(self):
+        nonexistent = os.path.join(self.temp_dir, "does_not_exist")
+        proc = subprocess.run(
+            [str(BIN_DIR / "verify-nx-targets"), "--root", nonexistent],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist", proc.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

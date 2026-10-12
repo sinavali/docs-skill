@@ -38,7 +38,7 @@ HEURISTIC_RULES = [
         "severity": "suggestion",
         "description": "Unbounded collection query or full-table scan pattern without explicit limit.",
         "path_regex": r"(services|apps|libs)[\\/].*\.(ts|js|go|cs|php|py)$",
-        "content_regex": r"(\.findAll\(\s*\)|\.find\(\{\s*\}\)|SELECT\s+\*\s+FROM\s+[a-zA-Z0-9_]+\s*;)",
+        "content_regex": r"(\.findAll\(\s*\)|\.find\(\{\s*\}\)|SELECT\s+\*\s+FROM\s+[a-zA-Z0-9_]+(?:\s*;|\s*[\"\'`\n]|\s*$))",
     },
     {
         "dim": 2,
@@ -149,12 +149,24 @@ CODE_EXTENSIONS = {
     ".ts", ".tsx", ".js", ".jsx", ".go", ".cs", ".php", ".py", ".rs", ".dart", ".java", ".kt", ".swift", ".cpp", ".c"
 }
 
+BINARY_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".svg", ".pdf",
+    ".wasm", ".zip", ".tar", ".gz", ".7z", ".rar", ".db", ".sqlite",
+    ".sqlite3", ".bin", ".pyc", ".pyo", ".pyd", ".exe", ".dll", ".so",
+    ".dylib", ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".mov",
+    ".avi", ".iso", ".dat"
+}
+
 
 def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[Dict]:
     findings = []
     norm_path = file_path.replace("\\", "/")
+    full_norm_path = os.path.abspath(file_path).replace("\\", "/")
     _, ext = os.path.splitext(norm_path.lower())
-    
+
+    if ext in BINARY_EXTENSIONS:
+        return findings
+
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
@@ -175,11 +187,15 @@ def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[
         })
 
     for rule in HEURISTIC_RULES:
-        if not re.search(rule["path_regex"], norm_path, re.IGNORECASE):
+        if not (re.search(rule["path_regex"], norm_path, re.IGNORECASE) or re.search(rule["path_regex"], full_norm_path, re.IGNORECASE)):
             continue
-            
+
         compiled_regex = re.compile(rule["content_regex"], re.IGNORECASE)
         for idx, line in enumerate(lines, start=1):
+            if rule["id"] == "RULE-5.1-HARDCODED-SECRET" and re.search(
+                r"(test|mock|dummy|fake|example|placeholder)", line, re.IGNORECASE
+            ):
+                continue
             if compiled_regex.search(line):
                 findings.append({
                     "dim": rule["dim"],
@@ -190,13 +206,16 @@ def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[
                     "line": idx,
                     "snippet": line.strip()[:100],
                 })
-                
+
     return findings
 
 
 def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6) -> Tuple[List[Dict], Dict]:
+    if not os.path.exists(target_dir):
+        raise FileNotFoundError(f"Target path '{target_dir}' does not exist.")
+
     all_findings = []
-    
+
     if os.path.isfile(target_dir):
         files_to_scan = [target_dir]
     else:
@@ -374,21 +393,29 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
-    
+
+    if not os.path.exists(args.scope):
+        print(f"[ERROR] Target scope '{args.scope}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
     raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth)
-    
+
     if args.save_baseline:
         with open(args.save_baseline, "w", encoding="utf-8") as f:
             json.dump(raw_findings, f, indent=2)
         print(f"[INFO] Saved {len(raw_findings)} baseline findings to {args.save_baseline}")
         sys.exit(0)
-        
+
     suppressed_count = 0
     if args.baseline:
         if os.path.exists(args.baseline):
-            with open(args.baseline, "r", encoding="utf-8") as f:
-                baseline_data = json.load(f)
-            findings, suppressed_count = filter_against_baseline(raw_findings, baseline_data)
+            try:
+                with open(args.baseline, "r", encoding="utf-8") as f:
+                    baseline_data = json.load(f)
+                findings, suppressed_count = filter_against_baseline(raw_findings, baseline_data)
+            except Exception as e:
+                print(f"[WARNING] Failed to parse baseline file '{args.baseline}': {e}. Auditing without baseline.")
+                findings = raw_findings
         else:
             print(f"[WARNING] Baseline file '{args.baseline}' not found. Auditing without baseline.")
             findings = raw_findings

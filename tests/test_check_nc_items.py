@@ -226,5 +226,74 @@ Missing frontmatter block completely.
         self.assertIn("[PARSE ERRORS]", proc.stdout)
 
 
+    def test_as_of_date_with_slash_format(self):
+        nc_file = os.path.join(self.temp_dir, "NC-SLASH.md")
+        content = """---
+id: "NC-20261010-008"
+status: "OPEN"
+created_date: "2026-10-10"
+discovered_by: "agent"
+---
+# Slash Date Test
+"""
+        with open(nc_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [
+                str(BIN_DIR / "check-nc-items"),
+                "--dir",
+                self.temp_dir,
+                "--as-of-date",
+                "2026/10/12",
+                "--max-age",
+                "14",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Expected 0: {proc.stdout} {proc.stderr}")
+        self.assertIn("[OK]", proc.stdout)
+
+    def test_explicit_nonexistent_dir_fails(self):
+        nonexistent = os.path.join(self.temp_dir, "does_not_exist")
+        proc = subprocess.run(
+            [
+                str(BIN_DIR / "check-nc-items"),
+                "--dir",
+                nonexistent,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("does not exist", proc.stderr)
+
+    def test_resolved_item_missing_resolved_date_fails(self):
+        nc_file = os.path.join(self.temp_dir, "NC-RESOLVED-NO-DATE.md")
+        content = """---
+id: "NC-20260901-003"
+status: "RESOLVED"
+created_date: "2026-09-01"
+discovered_by: "agent"
+---
+# Incomplete Resolved Item
+"""
+        with open(nc_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        proc = subprocess.run(
+            [
+                str(BIN_DIR / "check-nc-items"),
+                "--dir",
+                self.temp_dir,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("missing required 'resolved_date'", proc.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
