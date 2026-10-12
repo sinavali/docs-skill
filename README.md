@@ -59,7 +59,8 @@ enterprise-product/
 │   ├── AUDIT_REPORT.template.md      # Multi-dimensional audit output template
 │   ├── PR_CONTRACT.template.md       # GitHub PR description & checklist contract
 │   ├── project-target.template.json  # Standardized Nx project.json target contract
-│   └── ci-workflow.template.yml      # GitHub Actions enterprise CI workflow (Nx + Audits)
+│   ├── ci-workflow.template.yml      # GitHub Actions enterprise CI workflow (Nx + Audits)
+│   └── pre-commit-config.template.yaml # Git pre-commit hook configuration for local compliance
 ├── scripts/                          # Mechanical verification and validation CLI tooling
 │   ├── bin/                          # Executable wrappers (validate-change-surface, check-nc-items, etc.)
 │   ├── validate-change-surface.py    # Validates Change Surface presence and schema
@@ -112,11 +113,15 @@ git clone https://github.com/sinavali/enterprise-product.git ~/.gemini/config/sk
 ```
 
 ### 2. Monorepo Integration
-Copy the standard CI workflow and target templates into your monorepo:
+Copy the standard CI workflow, pre-commit configuration, and target templates into your monorepo:
 ```bash
 cp templates/ci-workflow.template.yml .github/workflows/ci.yml
+cp templates/pre-commit-config.template.yaml .pre-commit-config.yaml
 cp templates/project-target.template.json services/my-service/project.json
 cp templates/AGENT.template.md services/my-service/AGENT.md
+
+# Install local git hooks
+pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
 ### 3. Running Verification Tooling Locally
