@@ -104,6 +104,10 @@ def parse_nc_file(file_path: str) -> Optional[Dict]:
             if v == "" or v == "[]":
                 data[k] = []
                 current_list_key = k
+            elif v.startswith("[") and v.endswith("]"):
+                inner = v[1:-1].strip()
+                data[k] = [item.strip().strip("\"'") for item in inner.split(",") if item.strip()]
+                current_list_key = None
             else:
                 data[k] = v
                 current_list_key = None

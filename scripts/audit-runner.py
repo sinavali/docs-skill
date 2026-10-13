@@ -14,7 +14,7 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 DIMENSIONS = [
@@ -37,7 +37,7 @@ HEURISTIC_RULES = [
         "id": "RULE-1.1-UNBOUNDED-SCAN",
         "severity": "suggestion",
         "description": "Unbounded collection query or full-table scan pattern without explicit limit.",
-        "path_regex": r"(services|apps|libs)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"(services|apps|libs|packages)[\\/].*\.(ts|js|go|cs|php|py)$",
         "content_regex": r"(\.findAll\(\s*\)|\.find\(\{\s*\}\)|SELECT\s+\*\s+FROM\s+[a-zA-Z0-9_]+(?:\s*;|\s*[\"\'`\n]|\s*$))",
     },
     {
@@ -45,15 +45,15 @@ HEURISTIC_RULES = [
         "id": "RULE-2.1-ORM-IN-DOMAIN",
         "severity": "blocking",
         "description": "Direct ORM/framework dependency found in pure domain layer.",
-        "path_regex": r"domain[\\/].*\.(ts|js|go|cs|php|py)$",
-        "content_regex": r"(from ['\"](typeorm|prisma|sequelize|mongoose|gorm|sqlalchemy|django\.db)['\"]|import ['\"].*gorm.*['\"]|using Microsoft\.EntityFrameworkCore|use Illuminate\\Database|import (sqlalchemy|tortoise))",
+        "path_regex": r"domain[\\/].*\.(ts|tsx|js|jsx|go|cs|php|py|rs|dart|java|kt)$",
+        "content_regex": r"(from ['\"](typeorm|prisma|sequelize|mongoose|gorm|sqlalchemy|django\.db)['\"]|import ['\"].*gorm.*['\"]|using Microsoft\.EntityFrameworkCore|use Illuminate\\Database|import (sqlalchemy|tortoise)|org\.hibernate|javax\.persistence|jakarta\.persistence|org\.springframework\.data|diesel::|sea_orm::)",
     },
     {
         "dim": 3,
         "id": "RULE-3.1-INFINITE-RETRY",
         "severity": "blocking",
         "description": "Unbounded or infinite retry loop without max retry cap or backoff.",
-        "path_regex": r"\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"\.(ts|tsx|js|jsx|go|cs|php|py|rs|dart|java|kt)$",
         "content_regex": r"(retries:\s*Infinity|maxRetries:\s*-1|while\s*\(true\)\s*\{\s*try)",
     },
     {
@@ -61,7 +61,7 @@ HEURISTIC_RULES = [
         "id": "RULE-4.1-SQLITE-IN-INTEGRATION",
         "severity": "blocking",
         "description": "Banned in-memory SQL emulator (SQLite/H2) substituting production database in integration tests.",
-        "path_regex": r"(?:integration[\\/]|tests?[\\/].*integration|[._-]integration\.).*\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"(?:integration[\\/]|tests?[\\/].*integration|[._-]integration\.).*\.(ts|tsx|js|jsx|go|cs|php|py|rs|dart|java|kt)$",
         "content_regex": r"(:memory:|sqlite3\.connect\(['\"]:memory:['\"]\)|UseSqlite\(|createConnection\(\{.*type:\s*['\"]sqlite['\"])",
     },
     {
@@ -77,7 +77,7 @@ HEURISTIC_RULES = [
         "id": "RULE-5.2-RAW-SQL-CONCAT",
         "severity": "blocking",
         "description": "Possible unparameterized SQL string concatenation; risk of injection.",
-        "path_regex": r"(services|apps|libs)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"(services|apps|libs|packages)[\\/].*\.(ts|js|go|cs|php|py)$",
         "content_regex": r"(\.raw\(|query\(|execute\(|queryRaw\(|ExecuteSqlRaw\(|SqlQueryRaw\()(['\"].*?\b(SELECT|INSERT|UPDATE|DELETE)\b.*?\s*(\+|%)\s*|\s*f['\"].*?\b(SELECT|INSERT|UPDATE|DELETE)\b|\s*\$['\"].*?\b(SELECT|INSERT|UPDATE|DELETE)\b)",
     },
     {
@@ -85,7 +85,7 @@ HEURISTIC_RULES = [
         "id": "RULE-6.1-BARE-CONSOLE-LOG",
         "severity": "suggestion",
         "description": "Direct console.log in production code; prefer structured JSON logging.",
-        "path_regex": r"(services|apps|libs)[\\/].*src[\\/].*\.(ts|js)$",
+        "path_regex": r"(services|apps|libs|packages)[\\/].*src[\\/].*\.(ts|js)$",
         "content_regex": r"console\.(log|debug)\(",
     },
     {
@@ -93,7 +93,7 @@ HEURISTIC_RULES = [
         "id": "RULE-6.5-PII-LOGGING",
         "severity": "blocking",
         "description": "Unsanitized logging of sensitive PII or credentials detected.",
-        "path_regex": r"(services|apps|libs)[\\/].*\.(ts|js|go|cs|php|py)$",
+        "path_regex": r"(services|apps|libs|packages)[\\/].*\.(ts|js|go|cs|php|py)$",
         "content_regex": r"(log|logger|console|_logger)\.(info|debug|warn|warning|error|exception|critical|log|LogInformation|LogWarning|LogError)\([^)]*\b(password|user_password|auth_token|credit_card|secret_key)\b",
     },
     {
@@ -109,7 +109,7 @@ HEURISTIC_RULES = [
         "id": "RULE-8.2-EXPLICIT-ANY",
         "severity": "suggestion",
         "description": "Untyped 'any' in production TypeScript; use strict types or unknown.",
-        "path_regex": r"(services|apps|libs)[\\/].*src[\\/].*\.(ts|tsx)$",
+        "path_regex": r"(services|apps|libs|packages)[\\/].*src[\\/].*\.(ts|tsx)$",
         "content_regex": r":\s*any\b",
     },
     {
@@ -117,7 +117,7 @@ HEURISTIC_RULES = [
         "id": "RULE-10.1-TAUTOLOGICAL-TEST",
         "severity": "blocking",
         "description": "Tautological or vacuous test assertion detected.",
-        "path_regex": r"\.(spec|test)\.(ts|js|go|cs|py)$",
+        "path_regex": r"(\.(spec|test)|_test|([\\/]|^)test_[^\\/]*|([\\/]|^)tests?[\\/].*)\.(ts|tsx|js|jsx|go|cs|py|rs|dart|java|kt)$",
         "content_regex": r"(expect\((true|1)\)\.(toBe|toBeTruthy)\((true|1)?\)|assert\.(True|Equal)\(true|assert\s+True\b|assert\s+1\s*==\s*1|self\.assertTrue\(True\)|self\.assertEqual\((True,\s*True|1,\s*1)\))",
     },
     {
@@ -125,7 +125,7 @@ HEURISTIC_RULES = [
         "id": "RULE-10.2-SKIPPED-TEST",
         "severity": "blocking",
         "description": "Skipped test detected in test suite; disabled tests mask regressions.",
-        "path_regex": r"\.(spec|test)\.(ts|js|go|cs|py)$",
+        "path_regex": r"(\.(spec|test)|_test|([\\/]|^)test_[^\\/]*|([\\/]|^)tests?[\\/].*)\.(ts|tsx|js|jsx|go|cs|py|rs|dart|java|kt)$",
         "content_regex": r"(\b(xit|it\.skip|describe\.skip|test\.skip|t\.Skip|pytest\.mark\.skip|pytest\.skip)\b|@unittest\.skip|->skip\(|\[Fact\(Skip|\[Ignore)",
     },
 ]
@@ -227,7 +227,12 @@ def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6
             rel_dir = os.path.relpath(root, target_dir)
             if rel_dir != ".":
                 dir_parts = [p for p in rel_dir.replace("\\", "/").split("/") if p]
-                depth = len(dir_parts)
+                # Calculate nesting depth relative to the nearest subproject root if auditing from workspace root
+                if dir_parts and dir_parts[0] in {"services", "apps", "libs", "packages"} and len(dir_parts) >= 2:
+                    depth = len(dir_parts) - 2
+                else:
+                    depth = len(dir_parts)
+
                 if depth > max_dir_depth:
                     all_findings.append({
                         "dim": 2,
@@ -278,13 +283,18 @@ def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6
     return all_findings, scorecard
 
 
-def filter_against_baseline(findings: List[Dict], baseline_data: List[Dict]) -> Tuple[List[Dict], int]:
+def filter_against_baseline(findings: List[Dict], baseline_data: Any) -> Tuple[List[Dict], int]:
     """
     Suppresses findings that were already recorded in the baseline snapshot.
     Enforces the ratchet principle: 0 new blocking defects.
     """
+    if isinstance(baseline_data, dict) and "findings" in baseline_data:
+        baseline_data = baseline_data["findings"]
+    elif not isinstance(baseline_data, list):
+        baseline_data = []
+
     baseline_fingerprints: Set[str] = {
-        f"{b.get('id')}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data
+        f"{b.get('id')}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data if isinstance(b, dict)
     }
     
     new_findings = []
@@ -368,7 +378,7 @@ def generate_markdown_report(target: str, findings: List[Dict], scorecard: Dict,
         f"- [{'x' if scorecard[2]['blocking'] == 0 else ' '}] Pure Domain logic (zero framework / ORM leaking into domain).",
         f"- [{'x' if scorecard[4]['blocking'] == 0 else ' '}] Ephemeral Real Containers for all DB integration tests (Testcontainers/Podman).",
         f"- [{'x' if scorecard[4]['blocking'] == 0 else ' '}] UTC Storage Convention strictly observed in all datastores and contracts.",
-        f"- [{'x' if scorecard[9]['blocking'] == 0 else ' '}] Zero unaddressed open NEED_CLARIFICATION items older than 14 days.",
+        f"- [{'x' if scorecard[9]['blocking'] == 0 else ' '}] Zero unaddressed open `NEED_CLARIFICATION` items older than 14 days.",
         f"- [{'x' if scorecard[9]['blocking'] == 0 else ' '}] Change Surface declared and mechanically validated before implementation.",
         "",
         "---",

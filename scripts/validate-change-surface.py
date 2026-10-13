@@ -127,6 +127,10 @@ def validate_change_surface(file_path: str, strict: bool = False) -> Tuple[bool,
         risk = frontmatter.get("risk_level", "").upper()
         if risk and risk not in ALLOWED_RISK_LEVELS:
             errors.append(f"Invalid risk_level '{risk}'. Must be one of: {', '.join(sorted(ALLOWED_RISK_LEVELS))}")
+
+        created_str = str(frontmatter.get("created_date", "")).strip()
+        if created_str and not re.match(r"^\d{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12]\d|3[01])$", created_str):
+            errors.append(f"Invalid created_date '{created_str}'. Expected valid ISO date (YYYY-MM-DD).")
             
         affected = frontmatter.get("affected_projects")
         if not isinstance(affected, list) or len(affected) == 0:
@@ -149,7 +153,25 @@ def validate_change_surface(file_path: str, strict: bool = False) -> Tuple[bool,
         if not has_symbol_marker:
             errors.append("Code Surface does not list explicit files or symbol targets.")
 
-    # 4. Strict placeholder check
+    # 4. Check for test targets in Test Surface
+    test_surface_match = re.search(
+        r"^##\s*4\.\s*Test\s*Surface[^\n]*\n(.*?)(?=\n##\s+[0-9]|\Z)",
+        body,
+        re.DOTALL | re.IGNORECASE | re.MULTILINE,
+    )
+    if test_surface_match:
+        test_surface_text = test_surface_match.group(1).strip()
+        has_test_marker = bool(
+            re.search(
+                r"(?:[-*]|\d+\.)\s*`|###\s*(Unit|Domain|Integration|Failure|Concurrency|Compatibility|E2E)|\bN/A\b",
+                test_surface_text,
+                re.IGNORECASE,
+            )
+        )
+        if not has_test_marker:
+            errors.append("Test Surface does not list explicit test files, test suites, or justifiable N/A status.")
+
+    # 5. Strict placeholder check
     if strict:
         for pat in PLACEHOLDER_PATTERNS:
             matches = re.findall(pat, content)
