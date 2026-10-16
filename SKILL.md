@@ -5,58 +5,70 @@ description: Supreme enterprise gatekeeper and engineering operating system for 
 
 # Skill — `enterprise-product`
 
-The **supreme enterprise gatekeeper and engineering operating system** for polyglot monorepos. This skill enforces production-grade rigor, mechanical compliance, and zero-compromise engineering standards. It forbids AI agents from taking unverified shortcuts and mandates strict verification gates before any work is considered done.
+The **supreme enterprise gatekeeper and engineering operating system (EP-OS)** for polyglot monorepos. This skill enforces production-grade rigor, mechanical compliance, and zero-compromise engineering standards. It forbids AI agents from taking unverified shortcuts and mandates strict verification gates before any work is considered done.
 
 ---
 
 ## 1. Core Operating Principles
 
-1. **Monorepo Standard**: Every product is strictly a single monorepo governed at the root by **Nx** (`nx affected`, target delegations, dependency graph validation).
-2. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to project-level `AGENT.md` files. Subprojects specialize configuration but can never violate Tier 1 directives.
-3. **Architectural Profiles**:
-   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in pure domain logic. Transactional outbox for events.
-   - **Profile B (Web Applications)**: Clean Component & State Layering, SSR/SPA hydration safety, strict accessibility (WCAG 2.2 AA), bundle budgets, zero-trust web security.
-   - **Profile C (Mobile Clients - Native & Cross-Platform)**: Clean Architecture + Unidirectional State Flow, hardware-backed encrypted storage (Keychain/KeyStore/SQLCipher), offline-first sync, battery/lifecycle awareness.
-   - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI/Protobuf), strict SemVer, zero ambient side-effects.
-4. **Value-Driven Testing Matrix**:
+1. **Zero-Latency Execution Engine (Prime Directive P0)**:
+   - **Compound Shell Commands**: Always combine related shell commands using `&&` or pipelines in a single `run_command` invocation. Never serialize sequential roundtrips.
+   - **Parallel Inspection**: Emit multiple independent tool calls (e.g. parallel `view_file` or lookups) simultaneously in the same turn.
+   - **Context Hygiene**: Redirect noisy build, test, and install outputs to `/tmp/*.log`. Bound file reads (`StartLine`/`EndLine`).
+   - **Lossless Density**: Omit conversational filler, affirmative padding, and pleasantries. Maintain 100% technical fidelity, exact commands, and complete code blocks.
+2. **Monorepo Standard**: Every product is strictly a single monorepo governed at the root by **Nx** (`nx affected`, target delegations, dependency graph validation).
+3. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to project-level `AGENT.md` manifests. Subprojects specialize configuration but can never violate Tier 1 directives.
+4. **Four Architectural Profiles**:
+   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in pure domain logic. Transactional outbox for event publishing.
+   - **Profile B (Web Applications)**: Clean Component & State Layering, SSR/SPA hydration safety, WCAG 2.2 AA accessibility, tokenized design systems, and fluid Apple-grade motion.
+   - **Profile C (Mobile Clients - Native & Flutter)**: Clean Architecture + Unidirectional State Flow, hardware-backed encrypted storage (Keychain/KeyStore/SQLCipher), offline-first sync.
+   - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI 3.1 / Protobuf v3), automated multi-language codegen (`generate-ts`, `generate-dart`, `generate-go`), automated breaking change gates.
+5. **Value-Driven Testing Matrix**:
    - Domain logic: $\ge 95\%$ line & branch coverage.
    - Adapters & Infrastructure: $\ge 80\%$ line coverage with **real ephemeral containers (Testcontainers/Podman)**; engine-substitution emulators (e.g. SQLite for Postgres) are strictly prohibited.
-   - Mandatory test types: Domain/Unit, Integration, Contract, Failure/Resilience (timeouts, circuit breakers), Concurrency/Race conditions.
-5. **Structural Bounding & Anti-Sprawl Rules**:
-   - Files $\le 800$ lines (soft target $\le 400$ lines).
-   - Maximum directory depth $\le 6$ levels from project root.
-   - Co-location of tightly coupled domain artifacts over excessive micro-file fragmentation ($< 20$ lines).
-   - Zero generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`).
-6. **Pre-Implementation Change Surface**: Non-trivial modifications require a declared and validated `Change Surface` artifact before code changes begin.
-7. **2-Pass PR Self-Audit & Automated Merge Protocol**:
-   - Pass 1: Full diff audit against enterprise checklist ➔ Apply fixes ➔ Commit ➔ Push.
-   - Pass 2: Cumulative diff re-audit + CI verification. If 0 blocking defects and CI is green ➔ `gh pr merge --squash`. Escalates to human review on persistent defects or branch protection requirements.
-8. **Complete Documentation & NC Protocol**:
+   - Mandatory non-happy-path suites: Timeouts, circuit breakers, optimistic concurrency lock races, mutation score $\ge 85\%$.
+6. **Mechanical Blast-Radius Bounding**: Every non-trivial change requires a declared and validated `Change Surface`. The mechanical gate (`ep surface check-diff`) actively halts execution if any file outside the declared surface is touched.
+7. **Expand/Contract Database Migrations**: Destructive DDL (instant column drops, renames, non-null without default) is mechanically blocked by `ep migration check`.
+8. **2-Pass PR Self-Audit & Automated Merge Protocol**:
+   - Pass 1: Full diff audit against enterprise 10-dimension checklist ➔ Apply fixes ➔ Commit ➔ Push.
+   - Pass 2: Cumulative diff re-audit + CI verification (`nx affected -t lint,test,build`). If 0 blocking defects and CI is green ➔ `gh pr merge --squash`. Escalates to human review on persistent defects.
+9. **Complete Documentation & NC Protocol**:
    - Ambiguities are recorded as formal `NEED_CLARIFICATION` (NC) items. Open NC items older than 14 days mechanically block merges.
-   - ADRs for all architectural modifications. Expand/Contract pattern for zero-downtime database migrations.
+   - Architecture Decision Records (ADRs) for all architectural modifications.
 
 ---
 
 ## 2. Operational Modes
 
-Agents operate under one of five distinct modes. When invoked, determine or declare the active mode:
+Agents operate under one of seven distinct modes. When invoked, determine or declare the active mode:
 
 | Mode | Purpose | Modifies Files | Required Pre-condition |
 |---|---|---|---|
 | `plan` | Analyzes task, traces impact graph, generates & validates `Change Surface` artifact. | Yes (`CHANGE_SURFACE.md`) | Task request received. |
+| `investigate` | Root cause analysis, reproduces bug in ephemeral container, writes red tests. | Yes (Failing Tests) | Defect or bug report. |
 | `implement` | Executes TDD implementation according to Architectural Profile and testing matrix. | Yes (Code & Tests) | Validated `Change Surface` exists. |
-| `audit` | Runs the 10-Dimension Enterprise Audit across affected projects; outputs audit report. | Yes (`AUDIT_REPORT.md`) | Code implementation completed. |
-| `verify` | Runs mechanical scripts: Nx target checks, Change Surface validation, NC aging check, AGENT.md linting. | No | Staged or committed changes. |
+| `audit` | Runs the 10-Dimension Enterprise Audit across affected projects or git diff. | Yes (`AUDIT_REPORT.md`) | Code implementation completed. |
+| `verify` | Runs mechanical scripts: Nx targets, Change Surface validation, NC aging, manifests. | No | Staged or committed changes. |
 | `pr-audit` | Executes 2-Pass PR Self-Audit protocol, verifies CI, merges or escalates. | Yes (Fix commits / PR) | PR created or ready to push. |
+| `scaffold` | Generates 100% compliant projects and standard Nx target contracts. | Yes (New subproject) | New service/app requested. |
+| `session` | Manages multi-session workspace checkpoints, state pause/resume, and retention. | Yes (`.ep/sessions/`) | Session start, pause, resume, or checkpoint. |
+| `sync` | Validates multi-tier branch synchronization across main, test, stage, prod. | No | Pre-push, pre-merge, or promotion. |
+| `release` | Orchestrates Hybrid Dual-Tier SemVer bumps, signed git tags, and release notes. | Yes (`docs/releases/`) | Production merge or milestone completion. |
 
 ---
 
 ## 3. Mode Execution Workflows
 
+### Preflight Gate (Mandatory on First Turn)
+Run `python3 scripts/ep.py preflight`.
+- Verifies shell, git, python, and workspace write access.
+- If missing permissions: prompts user with repeatable instructions.
+- If access is refused: halts and refuses engagement on the Product.
+
 ### Mode: `plan`
 1. Load `references/documentation-system.md` and `templates/CHANGE_SURFACE.template.md`.
 2. Inspect the request to identify affected monorepo projects (`project.json`), domain entities, APIs, and infrastructure.
-3. If any business requirement or contract ambiguity is identified, record a formal NC item using `templates/NEED_CLARIFICATION.template.md` (see `references/nc-protocol.md`). Do not invent unverified assumptions.
+3. If any business requirement or contract ambiguity is identified, record a formal NC item using `templates/NEED_CLARIFICATION.template.md`. Do not invent unverified assumptions.
 4. Draft the Change Surface artifact covering:
    - Problem statement and explicit business intent.
    - Affected Projects and Architectural Profile mappings.
@@ -64,7 +76,12 @@ Agents operate under one of five distinct modes. When invoked, determine or decl
    - Test Surface: Unit, integration (ephemeral containers), failure, and contract test suites.
    - Invariants and non-negotiables preserved.
    - Risk matrix and rollback strategy.
-5. Run `python3 scripts/validate-change-surface.py <path_to_change_surface>` to verify structural compliance.
+5. Run `python3 scripts/ep.py surface validate <path_to_change_surface>` to verify structural compliance.
+
+### Mode: `investigate`
+1. Reproduce reported failure within an isolated ephemeral container or unit test suite.
+2. Author a failing (red) regression test asserting the expected behavior.
+3. Verify the failure matches production diagnostics before modifying business code.
 
 ### Mode: `implement`
 1. Read the approved `Change Surface` and the relevant project's `AGENT.md`.
@@ -74,46 +91,49 @@ Agents operate under one of five distinct modes. When invoked, determine or decl
    - Step B: Implement pure domain entities and use cases (Profile A/B/C/D rules apply).
    - Step C: Implement adapters and infrastructure using real containerized integrations (Podman/Testcontainers).
    - Step D: Ensure all timestamps are UTC, all external boundaries use typed contracts, and zero mock databases are used for integration tests.
-4. Run project test suite via `nx test <project>` and linters via `nx lint <project>`.
+4. Enforce blast radius: Run `python3 scripts/ep.py surface check-diff`. If uncommitted or staged files deviate from the declared surface, halt immediately.
+5. Run project test suite via `nx test <project>` and linters via `nx lint <project>`.
+
+### Mode: `session`
+1. Save progress checkpoint: `python3 scripts/ep.py session save --session-id <id> --task <task> --mode <mode>`.
+2. Resume on another platform or turn: `python3 scripts/ep.py session resume --session-id <id>`.
+
+### Mode: `sync`
+1. Verify branch topology alignment: `python3 scripts/ep.py vcs sync-check`.
+2. Block progression if unmerged drift exists between `main`, `test`, `stage`, or `prod`.
 
 ### Mode: `audit`
 1. Load `references/audit-taxonomy.md` and `templates/AUDIT_REPORT.template.md`.
-2. Execute the 10-Dimension Enterprise Audit across the target diff or affected projects:
-   - Dimension 1: Scalability & Capacity
-   - Dimension 2: Structural Maintainability & Modularity
-   - Dimension 3: Fault Tolerance & Resilience
-   - Dimension 4: Data Integrity & Concurrency
-   - Dimension 5: Security & Zero-Trust
-   - Dimension 6: Observability & Operability
-   - Dimension 7: Contract & Schema Drift
-   - Dimension 8: Code Quality & Typing Strictness
-   - Dimension 9: Documentation & Spec Drift
-   - Dimension 10: Test Fidelity & Assertion Quality
+2. Execute the 10-Dimension Enterprise Audit across the target diff or affected projects via `python3 scripts/ep.py audit --diff origin/main...HEAD`.
 3. Classify all findings strictly: `blocking` (must resolve before PR), `suggestion`, or `nit`.
-4. Run `python3 scripts/audit-runner.py --scope <project-or-diff>` to scaffold and record findings.
 
 ### Mode: `verify`
-1. Run mechanical validation tooling:
-   - `python3 scripts/verify-nx-targets.py`: Verifies every project in the monorepo defines the required standard Nx targets (`lint`, `test`, `build`, `audit`).
-   - `python3 scripts/verify-agent-manifests.py`: Verifies syntax and inheritance of all `AGENT.md` files.
-   - `python3 scripts/check-nc-items.py --max-age 14`: Scans all open NC items and flags any items $\ge 14$ days old as blocking.
-   - `python3 scripts/validate-change-surface.py`: Validates active Change Surface artifact.
-2. Halt if any mechanical check fails.
+1. Run mechanical validation tooling: `python3 scripts/ep.py verify`.
+2. Check database migrations: `python3 scripts/ep.py migration check`.
+3. Halt if any mechanical check fails.
 
 ### Mode: `pr-audit`
 1. Load `references/vcs-pr-protocol.md`.
-2. **Push & PR Initiation**: Push feature branch `feat/<scope>-<desc>` or `fix/<scope>-<desc>` and create PR with `templates/PR_CONTRACT.template.md`.
+2. Push feature branch `feat/<scope>-<desc>` or `fix/<scope>-<desc>` and open PR with `templates/PR_CONTRACT.template.md`.
 3. **Pass 1 (Full Diff Self-Audit)**:
-   - Inspect the entire cumulative diff (`git diff origin/main...HEAD`).
-   - Audit against the 10 dimensions and `PR_CONTRACT.md` checklist.
-   - If any defects (blocking or quality regressions) are found, apply code fixes immediately, run `nx affected --target=test`, commit with descriptive Conventional Commit, and push.
+   - Run `python3 scripts/ep.py audit --diff origin/main...HEAD`.
+   - Apply fixes, commit with Conventional Commit, and push.
 4. **Pass 2 (Cumulative Diff Re-Audit & Verification)**:
-   - Re-inspect cumulative diff.
-   - Run full CI verification: `nx affected --target=lint && nx affected --target=test && nx affected --target=build`.
-   - Run `python3 scripts/check-nc-items.py --block-on-open-aged`.
-   - If **0 blocking defects** and CI is fully green:
-     - If repository allows automated merge and no branch protection blocker exists: execute `gh pr merge --squash --delete-branch`.
-   - **Escalation Gate**: If defects remain after Pass 2, CI is red, or external human review is mandated by branch protection, immediately halt, post the audit failure report to the PR, and attach the label `needs/review`.
+   - Run `python3 scripts/ep.py verify`.
+   - Run branch sync-check: `python3 scripts/ep.py vcs sync-check`.
+   - Run full CI verification: `nx affected -t lint,test,build`.
+   - If PR targets `main` and is clean ➔ `gh pr merge --squash --delete-branch`.
+   - If PR targets `prod` ➔ run `python3 scripts/ep.py pr create-prod`. **DO NOT MERGE.** Production merges are strictly human-only.
+   - If defects persist or branch is protected ➔ attach `needs/review` label and halt.
+
+### Mode: `release`
+1. Prepare release: `python3 scripts/ep.py release create <version>`.
+2. Finalize production release: `python3 scripts/ep.py release finalize --prod`.
+
+### Mode: `scaffold`
+1. Generate standard subproject: `python3 scripts/ep.py init <name> --profile [A|B|C|D] --lang <language>`.
+2. Sync manifest projections: `python3 scripts/ep.py manifest sync`.
+3. Verify targets: `python3 scripts/ep.py verify`.
 
 ---
 
@@ -121,35 +141,36 @@ Agents operate under one of five distinct modes. When invoked, determine or decl
 
 Do not load all reference files simultaneously. Read on demand based on current mode:
 
-- `references/core-directives.md` — Prime Directives P1–P10, Tier 1/2/3 Master Rulebook, UTC conventions, self-hosted preferences.
-- `references/architectural-profiles.md` — Deep profiles for Backend (DDD/Hexagonal), Web (Next/Nuxt), Mobile (Flutter), Shared Contracts.
+- `references/execution-engine.md` — Zero-latency tool batching, context hygiene, lossless communication.
+- `references/multi-session-and-agent-agnosticism.md` — Multi-session workspaces, checkpointing, manifest projection, preflight access gate.
+- `references/release-and-milestone-governance.md` — Hybrid Dual-Tier SemVer, milestones, human-only prod merge policy.
+- `references/polyglot-stack-matrix.md` — 100% stack agnosticism (12+ languages), build manifests, orchestrator adapters.
+- `references/core-directives.md` — Prime Directives P0–P10, Tier 1/2/3 Master Rulebook, UTC conventions.
+- `references/static-analysis-matrix.md` — Polyglot strict typing (TypeScript, Go, Rust, Flutter, PHP).
+- `references/architectural-profiles.md` — Profiles A (DDD/Hexagonal), B (Web/A11y/Motion), C (Flutter/BLoC), D (Contracts/Codegen).
 - `references/monorepo-nx-standard.md` — Root Nx orchestration, project.json contracts, target delegation.
 - `references/agent-hierarchy-spec.md` — AGENT.md schema, cascading inheritance, overrides vs invariants.
 - `references/audit-taxonomy.md` — 10-Dimension Audit Guide, verification steps, scoring.
-- `references/testing-matrix.md` — Value-driven testing rules, testcontainers, failure testing, coverage gates.
-- `references/vcs-pr-protocol.md` — GitHub Flow, Conventional Commits, 2-Pass PR Self-Audit algorithm.
-- `references/documentation-system.md` — Change Surface lifecycle, ADRs, file-level docs, doc drift checks.
+- `references/testing-matrix.md` — Value-driven testing rules, Testcontainers, failure testing, coverage gates.
+- `references/vcs-pr-protocol.md` — Monorepo git worktrees, Conventional Commits, 4-tier branches, 2-Pass PR Self-Audit.
+- `references/documentation-system.md` — Change Surface lifecycle, ADRs, topology graphing (`ep graph`).
 - `references/nc-protocol.md` — NEED_CLARIFICATION schema, lifecycle, 14-day escalation mechanics.
 
 ---
 
-## 5. Templates & Script Tooling Index
+## 5. Unified Mechanical CLI Tooling (`ep`)
 
-### Templates (`templates/`)
-- `templates/CHANGE_SURFACE.template.md` — Pre-implementation Change Surface template.
-- `templates/NEED_CLARIFICATION.template.md` — NC item definition template.
-- `templates/ADR.template.md` — Architecture Decision Record template.
-- `templates/AGENT.template.md` — Per-project AGENT.md manifest template.
-- `templates/AUDIT_REPORT.template.md` — Multi-dimensional audit output template.
-- `templates/PR_CONTRACT.template.md` — PR description contract and self-audit checklist.
-- `templates/project-target.template.json` — Standardized Nx `project.json` targets.
-- `templates/ci-workflow.template.yml` — GitHub Actions enterprise CI workflow.
-- `templates/pre-commit-config.template.yaml` — Git pre-commit hook configuration for local governance.
+All mechanical gates are accessible through the single executable entrypoint `scripts/bin/ep` (or `python3 scripts/ep.py`):
 
-### Verification CLI Tooling (`scripts/` and `scripts/bin/`)
-- `scripts/validate-change-surface.py` — Change Surface schema and completeness validator.
-- `scripts/check-nc-items.py` — NC item parser, age tracker, and 14-day merge blocking detector.
-- `scripts/audit-runner.py` — Automated 10-dimension audit scaffold and runner.
-- `scripts/verify-nx-targets.py` — Standard Nx target validator across all `project.json` files.
-- `scripts/verify-agent-manifests.py` — Schema validator and inheritance checker for `AGENT.md`.
-- `scripts/bin/` — Executable wrapper binaries for all validation scripts.
+```bash
+ep init <name> --profile [A|B|C|D] --lang [go|rust|ts|dart|php]
+ep surface validate <path>
+ep surface check-diff [--base origin/main]
+ep audit [--diff origin/main...HEAD | --scope <path>]
+ep migration check [--dir <migrations-dir>]
+ep verify [--root <monorepo-root>]
+ep nc check [--max-age 14]
+ep worktree create <branch-name>
+ep worktree remove <branch-name>
+ep graph [--format mermaid|json]
+```

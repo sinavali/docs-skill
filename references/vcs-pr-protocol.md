@@ -120,16 +120,50 @@ Before opening the PR:
    - All tests pass, including container integration tests.
    - No open `NEED_CLARIFICATION` item in the repo is $\ge 14$ days old.
 
-### Step 4: Merge Decision or Escalation Gate
-- **Scenario A: 0 Blocking Defects & CI Green & Repository Permits Automated Merge**:
-  - The agent executes:
+### Step 4: Merge Decision, Protected Promotion & Production Gate
+- **Scenario A: Feature PR targeting `main` (0 Blocking Defects & CI Green)**:
+  - If repo permissions permit, the agent executes automated squash merge:
     ```bash
-    gh pr merge --squash --delete-branch
+    ep vcs sync-check && gh pr merge --squash --delete-branch
     ```
-- **Scenario B: Escalation Gate (Human Review Required)**:
+- **Scenario B: Production Promotion (`prod` Branch) - STRICT HUMAN-ONLY GATE**:
+  - **The Inviolable Law**: AI agents are **FORBIDDEN** from merging PRs into the `prod` branch.
+  - Agents may prepare release candidate PRs targeting `prod` via `ep pr create-prod`.
+  - `ep pr create-prod` mechanically validates:
+    1. Target branch is `prod`.
+    2. Auto-merge is forcibly disabled (`--auto=false`).
+    3. Auto-delete-source-branch is disabled.
+    4. Required human signoff labels (`needs/human-approval`, `security/prod-gate`) are applied.
+  - Merging to `prod` is executed exclusively by authorized human engineers. Upon human merge, CI triggers `ep release finalize --prod` to stamp the cryptographic release tag (`vX.Y.Z`).
+- **Scenario C: Escalation Gate (Human Review Required)**:
   - If any of the following conditions are met:
     1. Blocking defects remain unresolved after Pass 2.
     2. Any CI check fails.
     3. Branch protection rules require human peer code review approval.
     4. An open NC item is $\ge 14$ days old.
-  - The agent must **immediately halt**, post the detailed `AUDIT_REPORT.md` as a PR comment, apply the `needs/review` label, and notify the engineering team.
+    5. `ep vcs sync-check` fails due to unmerged topology drift.
+  - The agent must **immediately halt**, post `AUDIT_REPORT.md` as a PR comment, apply the `needs/review` label, and notify the engineering team.
+
+---
+
+## 4. Multi-Tier Branch Pipeline & Mandatory `sync-check`
+
+Enterprise codebases strictly enforce a 4-tier branch hierarchy:
+
+```text
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│  main (Trunk)  │────►│  test (QA-Env) │────►│ stage (Pre-Prod│────►│ prod (Live)   │
+│ Continuous-Int │     │ Automated E2E  │     │ Staging Deploy │     │ Human-Only Gate│
+└────────────────┘     └────────────────┘     └────────────────┘     └────────────────┘
+```
+
+### 4.1 Topology Invariant
+- `feat/*` branches must branch off and merge back into `main`.
+- Promotion downstream (`main` $\rightarrow$ `test` $\rightarrow$ `stage` $\rightarrow$ `prod`) must occur in linear lockstep.
+- Direct ad-hoc commits or cherry-picks directly to `stage` or `prod` that do not originate in `main` are strictly forbidden.
+
+### 4.2 Mandatory `sync-check` Enforcement
+Before any push, merge, or PR progression, `ep vcs sync-check` must be executed:
+- Pre-push hook: Runs `ep vcs sync-check` to block pushes if local branch has unmerged drift.
+- CI pipeline: Validates that `test`, `stage`, and `prod` topologies do not have divergent unmerged commits from `main`.
+

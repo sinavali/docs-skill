@@ -42,7 +42,9 @@ enterprise-product/
 ├── LICENSE                           # MIT License
 ├── README.md                         # This guide
 ├── references/                       # In-depth architectural & operational specifications
-│   ├── core-directives.md            # Prime Directives P1–P10 & Tier 1/2/3 Master Rulebook
+│   ├── core-directives.md            # Prime Directives P0–P10 & Tier 1/2/3 Master Rulebook
+│   ├── execution-engine.md           # Tool batching, compound commands, context hygiene & lossless density
+│   ├── static-analysis-matrix.md     # Polyglot strict compiler & static analysis matrix
 │   ├── architectural-profiles.md     # Profile A (DDD), Profile B (Web), Profile C (Flutter), Profile D (Contracts)
 │   ├── monorepo-nx-standard.md       # Root Nx orchestration & project.json target contracts
 │   ├── agent-hierarchy-spec.md       # AGENT.md schema, inheritance rules, and precedence
@@ -52,6 +54,8 @@ enterprise-product/
 │   ├── documentation-system.md       # Change Surface, ADR workflow, doc indexing, drift checks
 │   └── nc-protocol.md                # NEED_CLARIFICATION schema, lifecycle, and 14-day escalation
 ├── templates/                        # Ready-to-use production templates
+│   ├── profiles/                     # Canonical Nx project.json templates (Go, Rust, Next.js, Flutter, Contracts)
+│   ├── outbox-migration.sql          # Transactional Outbox pattern SQL schema
 │   ├── CHANGE_SURFACE.template.md    # Pre-implementation Change Surface template
 │   ├── NEED_CLARIFICATION.template.md# NC item definition template
 │   ├── ADR.template.md               # Architecture Decision Record template
@@ -62,10 +66,11 @@ enterprise-product/
 │   ├── ci-workflow.template.yml      # GitHub Actions enterprise CI workflow (Nx + Audits)
 │   └── pre-commit-config.template.yaml # Git pre-commit hook configuration for local compliance
 ├── scripts/                          # Mechanical verification and validation CLI tooling
-│   ├── bin/                          # Executable wrappers (validate-change-surface, check-nc-items, etc.)
+│   ├── bin/                          # Executable wrappers (ep, validate-change-surface, etc.)
+│   ├── ep.py                         # Unified EP-OS CLI (surface, migration, graph, init, worktree, audit, verify)
 │   ├── validate-change-surface.py    # Validates Change Surface presence and schema
 │   ├── check-nc-items.py             # Parses open NC items, flags 14-day merge blockers
-│   ├── audit-runner.py               # Runs/scaffolds the 10-dimension audit
+│   ├── audit-runner.py               # Runs/scaffolds the 10-dimension audit (with --diff and baselines)
 │   ├── verify-nx-targets.py          # Ensures every project implements standard Nx targets
 │   └── verify-agent-manifests.py     # Validates syntax and inheritance of all AGENT.md files
 └── tests/                            # Self-tests validating the skill's scripts and templates
@@ -92,14 +97,16 @@ Every audit evaluates changes across 10 critical dimensions:
 
 ## Operational Modes
 
-When AI agents interact with the repository, they declare and operate under one of five distinct modes:
+When AI agents interact with the repository, they declare and operate under one of seven distinct modes:
 
 | Mode | Purpose | Command / Workflow |
 |---|---|---|
-| `plan` | Analyzes task, traces impact, generates and validates `Change Surface` | `python3 scripts/validate-change-surface.py CHANGE_SURFACE.md` |
-| `implement` | Executes TDD implementation according to Architectural Profile | `nx affected -t test` |
-| `audit` | Runs the 10-Dimension Enterprise Audit; outputs scorecard | `python3 scripts/audit-runner.py --scope <project-or-diff>` |
-| `verify` | Runs mechanical scripts: Nx target checks, manifest linting, NC aging | `python3 scripts/verify-nx-targets.py && python3 scripts/verify-agent-manifests.py` |
+| `plan` | Analyzes task, traces impact, generates and validates `Change Surface` | `ep surface validate CHANGE_SURFACE.md` |
+| `investigate` | Read-only codebase reconnaissance, structural search, root cause isolation | `ast-grep scan` / log analysis |
+| `scaffold` | Generates compliant subprojects from profile target templates | `ep init <name> --profile <A\|B\|C\|D> --lang <stack>` |
+| `implement` | Executes TDD implementation strictly bounded to declared surface | `ep surface check-diff` && `nx affected -t test` |
+| `audit` | Runs the 10-Dimension Enterprise Audit; outputs scorecard | `ep audit --diff origin/main` |
+| `verify` | Runs mechanical gates: Nx targets, manifests, NC items, migrations | `ep verify` && `ep migration check --diff` |
 | `pr-audit` | Executes 2-Pass PR Self-Audit protocol; verifies CI, merges or escalates | `gh pr merge --squash` |
 
 ---
@@ -117,26 +124,33 @@ Copy the standard CI workflow, pre-commit configuration, and target templates in
 ```bash
 cp templates/ci-workflow.template.yml .github/workflows/ci.yml
 cp templates/pre-commit-config.template.yaml .pre-commit-config.yaml
-cp templates/project-target.template.json services/my-service/project.json
+cp templates/profiles/go-service-project.json services/my-service/project.json
 cp templates/AGENT.template.md services/my-service/AGENT.md
 
 # Install local git hooks
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
-### 3. Running Verification Tooling Locally
+### 3. Unified Mechanical CLI (`ep`)
+All compliance checks are accessible via the zero-dependency `ep` CLI tool:
 ```bash
-# Verify Nx targets across all project.json files
-python3 scripts/verify-nx-targets.py
+# Check git diff against declared Change Surface (blast-radius guard)
+ep surface check-diff
 
-# Lint all AGENT.md files for Tier 1 violations
-python3 scripts/verify-agent-manifests.py
+# Scan database migrations for destructive zero-downtime alterations
+ep migration check --diff
 
-# Check for open NC items older than 14 days
-python3 scripts/check-nc-items.py --max-age 14
+# Generate live architecture topology diagram in Mermaid format
+ep graph --format mermaid
 
-# Run 10-Dimension Enterprise Audit
-python3 scripts/audit-runner.py --scope services/my-service
+# Scaffold a new fully compliant Profile A backend service in Go
+ep init billing-service --profile A --lang go
+
+# Run 10-Dimension Audit scoped to active PR git diff
+ep audit --diff origin/main
+
+# Run full mechanical gatekeeper suite (Nx targets, AGENT manifests, NC expiration)
+ep verify
 ```
 
 ---

@@ -210,13 +210,22 @@ def scan_file_for_violations(file_path: str, max_file_lines: int = 800) -> List[
     return findings
 
 
-def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6) -> Tuple[List[Dict], Dict]:
-    if not os.path.exists(target_dir):
+def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6, diff_base: Optional[str] = None) -> Tuple[List[Dict], Dict]:
+    if not os.path.exists(target_dir) and not diff_base:
         raise FileNotFoundError(f"Target path '{target_dir}' does not exist.")
 
     all_findings = []
 
-    if os.path.isfile(target_dir):
+    if diff_base:
+        try:
+            res = subprocess.run(["git", "diff", "--name-only", diff_base], capture_output=True, text=True, check=False)
+            if res.returncode == 0:
+                files_to_scan = [f.strip() for f in res.stdout.splitlines() if f.strip() and os.path.exists(f.strip())]
+            else:
+                files_to_scan = [target_dir] if os.path.isfile(target_dir) else []
+        except Exception:
+            files_to_scan = [target_dir] if os.path.isfile(target_dir) else []
+    elif os.path.isfile(target_dir):
         files_to_scan = [target_dir]
     else:
         files_to_scan = []
@@ -400,15 +409,16 @@ def main():
     parser.add_argument("--max-dir-depth", type=int, default=6, help="Maximum allowed directory nesting depth (default: 6)")
     parser.add_argument("--baseline", help="Path to baseline JSON file for ratchet auditing")
     parser.add_argument("--save-baseline", help="Path to save current findings as baseline JSON")
+    parser.add_argument("--diff", help="Audit only modified git diff files against base (e.g. main or HEAD~1)")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     
     args = parser.parse_args()
 
-    if not os.path.exists(args.scope):
+    if not os.path.exists(args.scope) and not args.diff:
         print(f"[ERROR] Target scope '{args.scope}' does not exist.", file=sys.stderr)
         sys.exit(1)
 
-    raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth)
+    raw_findings, _ = run_audit(args.scope, max_file_lines=args.max_file_lines, max_dir_depth=args.max_dir_depth, diff_base=args.diff)
 
     if args.save_baseline:
         with open(args.save_baseline, "w", encoding="utf-8") as f:

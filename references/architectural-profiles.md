@@ -64,11 +64,21 @@ services/<service-name>/
 ```
 
 ### 4. Distributed Resilience & Transactional Integrity
-- **Transactional Outbox Pattern**: In distributed event-driven systems, use cases that mutate aggregate state and emit domain events must persist the event to a local transactional `outbox` table within the same ACID database transaction. Direct in-memory publishing to network message brokers without an outbox is strictly forbidden for non-idempotent operations.
+- **Transactional Outbox Pattern**: In distributed event-driven systems, use cases that mutate aggregate state and emit domain events must persist the event to a local transactional `outbox_events` table (see `templates/outbox-migration.sql`) within the same ACID database transaction. Direct in-memory publishing to network message brokers without an outbox is strictly forbidden for non-idempotent operations.
 - **Idempotency Keys**: All mutating ingress boundaries (REST controllers, gRPC handlers, message consumers) must accept and enforce an idempotency key with TTL deduplication.
 - **Graceful Shutdown**: Servers must trap `SIGTERM`/`SIGINT`, stop accepting new inbound connections, drain active HTTP/gRPC requests within a configured grace period (15–30s), finish processing active queue messages, and cleanly close database connection pools.
 
-### 5. Forbidden Patterns in Profile A
+### 5. Idiomatic Language DDD Directives
+- **Go DDD Invariants**:
+  - Pure domain packages have unexported struct fields; state mutations must pass through constructor functions (`NewOrder(...) (*Order, error)`) and aggregate methods (`func (o *Order) Cancel(...) error`).
+  - Interfaces must be defined at the **consumer/use-case site**, not at the producer site.
+  - Domain errors must be typed package variables or custom structs (`var ErrOrderAlreadyShipped = errors.New(...)`). Zero naked string errors.
+- **Rust DDD Invariants**:
+  - Use algebraic data types (`enum OrderStatus`) to make invalid domain states unrepresentable at compile time.
+  - Value objects use the newtype pattern: `struct OrderId(Uuid); struct Money(u64, Currency);`.
+  - All mutating domain methods must return `Result<(), DomainError>`.
+
+### 6. Forbidden Patterns in Profile A
 - **Anemic Domain Models**: Entities acting as plain property bags with external procedural logic modifying state directly. Invariants must be guarded inside entities.
 - **Leaking ORM Entities into Domain**: Exposing Hibernate/Prisma/Entity Framework/Eloquent/GORM models as domain models. Persistence models must map to domain entities.
 - **Engine-Substitution Mocks in Integration Tests**: Substituting PostgreSQL/MySQL with in-memory SQLite in tests. (Using SQLite in tests is permitted only if SQLite is the actual production engine). Must use Testcontainers or Podman.
@@ -122,8 +132,15 @@ apps/<web-app-name>/
 
 ### 3. Non-Negotiable Mandates
 - **SSR Hydration Safety**: No window/document access during SSR execution. Zero hydration mismatch errors.
-- **Accessibility (WCAG 2.2 AA)**: Interactive elements must have accessible labels, full keyboard navigation, and proper ARIA semantics.
+- **Accessibility (WCAG 2.2 AA)**: Interactive elements must have accessible labels, full keyboard navigation, and proper ARIA semantics. Automated Axe-core tests are mandatory in the project's test suite.
 - **Bundle Budgets**: Enforce initial bundle size budgets ($\le 180 \text{ KB}$ gzipped for critical entrypoints).
+- **Design Tokens & Aesthetic Hygiene**:
+  - All styling must consume a centralized token system: 4–6 semantic color hexes, clear typographic scale, consistent spacing steps.
+  - Ban generic AI clichés: tracked-out all-caps labels, monolithic card grids, artificial gradient washes, and non-semantic numbered badges (01/02/03).
+- **Fluid Motion & Direct Manipulation**:
+  - Interactions respond on pointer-down, not click-up.
+  - 1:1 direct touch/mouse tracking via Pointer Events with `setPointerCapture`.
+  - Spring-driven animations inheriting release velocity with interruptible, non-blocking physics.
 - **Zero-Trust Web Security**: Strict Content Security Policy (CSP), sanitized outputs against XSS, HTTP-only secure cookies for tokens, anti-CSRF protection on mutating requests.
 
 ### 4. Forbidden Patterns in Profile B
@@ -162,7 +179,7 @@ Separation of native UI views from reactive state machines and encrypted persist
 apps/<mobile-app-name>/
 ├── project.json                      # Task orchestrator configuration
 ├── AGENT.md                          # Profile C manifest
-├── src/ (or lib/ for Flutter, app/ for Android/iOS)
+├── lib/ (or src/ for Native / React Native)
 │   ├── core/                         # Network clients, encrypted storage, error handling
 │   │   ├── error/
 │   │   ├── network/
@@ -178,7 +195,7 @@ apps/<mobile-app-name>/
 │   │       │   ├── repositories/     # Repository interfaces
 │   │       │   └── usecases/         # Callable business use cases
 │   │       └── presentation/
-│   │           ├── state/            # State machines, view-models, event reducers
+│   │           ├── state/            # State machines (BLoC / Cubit / View-Models)
 │   │           ├── screens/          # Top-level screen views
 │   │           └── components/       # Reusable mobile UI components
 │   └── main.*                        # Application entrypoint
@@ -205,7 +222,7 @@ apps/<mobile-app-name>/
 
 Profile D governs shared API schemas, client SDKs, common domain utilities, and serialization protocols.
 
-### 1. Architectural Model: Contract-First & Zero Side-Effects
+### 1. Architectural Model: Contract-First & Multi-Language Generation
 All contracts originate from machine-readable specifications and generate typed code for Profiles A, B, and C:
 
 ```text
@@ -213,11 +230,13 @@ All contracts originate from machine-readable specifications and generate typed 
 │  Schema Authority (OpenAPI 3.1 YAML / Protobuf v3 / JSON-S) │
 │  Single source of truth for all cross-service communication │
 ├─────────────────────────────────────────────────────────────┤
-│  Generated Code (Go, TypeScript, Dart, C# models & clients) │
-│  Strict SemVer compliance, zero manual editing             │
+│  Automated Multi-Target Codegen Targets in Nx               │
+│  - generate-ts: TypeScript DTOs & Zod schemas for Profile B │
+│  - generate-dart: Dart models & client for Profile C        │
+│  - generate-go: Go structs & router interfaces for Profile A│
 ├─────────────────────────────────────────────────────────────┤
-│  Pure Validation & Utilities                                │
-│  Zero ambient side-effects, deterministic input/output      │
+│  Mechanical Schema Breaking Gate                            │
+│  Automated diffing (oasdiff / buf breaking) vs origin/main  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -239,8 +258,12 @@ libs/<library-name>/
 
 ### 3. Non-Negotiable Mandates
 - **Semantic Versioning (SemVer)**: Strictly enforce SemVer: MAJOR (breaking changes), MINOR (backwards-compatible additions), PATCH (fixes).
+- **Automated Multi-Target Codegen**: Schemas must define Nx codegen targets:
+  - `generate-ts`: Generates typed TypeScript contracts and runtime schemas.
+  - `generate-dart`: Generates Dart classes and serialization models for Flutter clients.
+  - `generate-go`: Generates Go struct definitions and interface handlers for backend services.
+- **Mechanical Breaking Change Gate**: PR CI pipelines must run schema diffing (`oasdiff` or `buf breaking`) comparing the active branch with `origin/main`. Breaking changes without a major SemVer bump trigger an immediate merge block.
 - **Zero Ambient Side-Effects**: Shared libraries must not read environment variables, open network connections, or write to disk upon module import.
-- **Schema Drift Gate**: CI must verify that generated code matches schemas exactly (`nx run <contract>:lint-contracts`).
 - **Purity**: Pure functional transformations and deterministic validation only.
 
 ### 4. Forbidden Patterns in Profile D
