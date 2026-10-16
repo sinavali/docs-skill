@@ -55,21 +55,14 @@ except ImportError:
 
 def cmd_surface(args: argparse.Namespace) -> int:
     if args.action == "validate":
-        from scripts.validate_change_surface import validate_change_surface
-
         target_file = args.file or "CHANGE_SURFACE.md"
         if not os.path.exists(target_file):
             print(f"[ERROR] Change Surface file '{target_file}' not found.", file=sys.stderr)
             return 1
-        valid, errors = validate_change_surface(target_file, strict=args.strict)
-        if valid:
-            print(f"[OK] Change Surface '{target_file}' is structurally valid.")
-            return 0
-        else:
-            print(f"[FAIL] Structural violations in '{target_file}':", file=sys.stderr)
-            for err in errors:
-                print(f"  - {err}", file=sys.stderr)
-            return 1
+        cmd = [sys.executable, os.path.join(SCRIPTS_DIR, "validate-change-surface.py"), target_file]
+        if args.strict:
+            cmd.append("--strict")
+        return subprocess.run(cmd).returncode
 
     elif args.action == "check-diff":
         base_branch = args.base or "origin/main"
@@ -689,45 +682,37 @@ def main():
     elif args.subcommand == "milestone":
         sys.exit(cmd_milestone(args))
     elif args.subcommand == "audit":
-        from scripts.audit_runner import main as audit_main
+        cmd = [sys.executable, os.path.join(SCRIPTS_DIR, "audit-runner.py")]
+        if args.scope:
+            cmd.extend(["--scope", args.scope])
+        if args.output:
+            cmd.extend(["--output", args.output])
+        if args.diff:
+            cmd.extend(["--diff", args.diff])
+        if args.json:
+            cmd.append("--json")
+        sys.exit(subprocess.run(cmd).returncode)
 
-        sys.argv = [sys.argv[0]] + (["--scope", args.scope] if args.scope else []) + (["--output", args.output] if args.output else []) + (["--json"] if args.json else [])
-        sys.exit(audit_main())
     elif args.subcommand == "verify":
-        from scripts.check_nc_items import main as nc_main
-        from scripts.verify_agent_manifests import main as agent_main
-        from scripts.verify_nx_targets import main as nx_main
-
         print("=== 1. Verifying Nx Target Contracts ===")
-        sys.argv = [sys.argv[0], "--root", args.root]
-        nx_res = 0
-        try:
-            nx_main()
-        except SystemExit as e:
-            nx_res = e.code or 0
+        nx_res = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "verify-nx-targets.py"), "--root", args.root]).returncode
 
         print("\n=== 2. Linting AGENT.md Manifests ===")
-        agent_res = 0
-        try:
-            agent_main()
-        except SystemExit as e:
-            agent_res = e.code or 0
+        agent_res = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "verify-agent-manifests.py")]).returncode
 
         print("\n=== 3. Checking Open NC Item Expiration ===")
-        sys.argv = [sys.argv[0], "--dir", os.path.join(args.root, "docs/nc") if os.path.exists(os.path.join(args.root, "docs/nc")) else args.root, "--max-age", "14"]
-        nc_res = 0
-        try:
-            nc_main()
-        except SystemExit as e:
-            nc_res = e.code or 0
+        nc_dir = os.path.join(args.root, "docs/nc")
+        if os.path.exists(nc_dir):
+            nc_res = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "check-nc-items.py"), "--dir", nc_dir, "--max-age", "14"]).returncode
+        else:
+            print("[INFO] No docs/nc directory found under root. 0 open NC items.")
+            nc_res = 0
 
         sys.exit(1 if (nx_res != 0 or agent_res != 0 or nc_res != 0) else 0)
 
     elif args.subcommand == "nc":
-        from scripts.check_nc_items import main as nc_main
-
-        sys.argv = [sys.argv[0], "--max-age", str(args.max_age)]
-        sys.exit(nc_main())
+        cmd = [sys.executable, os.path.join(SCRIPTS_DIR, "check-nc-items.py"), "--max-age", str(args.max_age)]
+        sys.exit(subprocess.run(cmd).returncode)
 
 
 if __name__ == "__main__":
