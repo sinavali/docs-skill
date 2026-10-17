@@ -1,36 +1,121 @@
-# enterprise-product
+# Enterprise-Product (EP-OS)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Monorepo: Nx](https://img.shields.io/badge/Monorepo-Nx-143055.svg)](https://nx.dev)
-[![Architecture: DDD%20%2B%20Hexagonal](https://img.shields.io/badge/Architecture-DDD%20%2B%20Hexagonal-8A2BE2.svg)](references/architectural-profiles.md)
+[![Monorepo: Nx & DAG](https://img.shields.io/badge/Orchestrator-Nx%20%2F%20EP--Runner-143055.svg)](references/monorepo-nx-standard.md)
+[![Architecture: DDD + Hexagonal](https://img.shields.io/badge/Architecture-DDD%20%2B%20Hexagonal-8A2BE2.svg)](references/architectural-profiles.md)
+[![Tests: 92 Passing](https://img.shields.io/badge/Tests-92%20Passing-brightgreen.svg)](tests/)
 
-**The supreme enterprise gatekeeper and engineering operating system for polyglot monorepos.**
+**The production-grade engineering operating system and mechanical gatekeeper for polyglot monorepos.**
 
-`enterprise-product` enforces production-grade rigor, mechanical compliance, and zero-compromise engineering standards. It guarantees that AI agents and human contributors uphold architectural integrity, value-driven testing, and strict quality gates before any work is considered done.
+`enterprise-product` (EP-OS) ensures that AI coding agents (and human contributors) uphold architectural integrity, zero-compromise testing standards, and disciplined software engineering practices. It replaces loose agent prompting with deterministic, mechanical verification gates.
 
 ---
 
-## Core Tenets
+## Why EP-OS?
 
-1. **Single Monorepo Standard**: Every product is managed at the root by a deterministic DAG task orchestrator (with **Nx** as reference standard: `nx affected`, project graphs, distributed caching, and standard target contracts across Go, C#, Dart, Swift, Rust, PHP, and TypeScript).
-2. **Hierarchical Governance (`AGENT.md`)**: Root enterprise inviolables cascade down to per-project `AGENT.md` manifests. Subprojects specialize configuration but cannot override Tier 1 directives.
-3. **Four Architectural Profiles**:
-   - **Profile A (Backend & Core Services)**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters). Zero framework coupling in domain logic. Transactional outbox for event publishing.
-   - **Profile B (Web Applications)**: Clean Component & State Layering, SSR/SPA hydration safety, accessibility (WCAG 2.2 AA), strict bundle budgets.
-   - **Profile C (Mobile Clients - Native & Cross-Platform)**: Clean Architecture + Unidirectional State Flow, hardware-backed encrypted storage (Keychain/KeyStore/SQLCipher), offline-first sync.
-   - **Profile D (Shared Contracts & Core Libraries)**: Contract-first (OpenAPI 3.1 / Protobuf v3), strict SemVer, zero ambient side-effects.
-4. **Value-Driven Testing Matrix**:
-   - Domain logic: $\ge 95\%$ Line and $\ge 95\%$ Branch coverage.
-   - Infrastructure & Adapters: $\ge 80\%$ Line coverage via **real ephemeral containers (Testcontainers/Podman)**; engine-substitution emulators (e.g. SQLite for PostgreSQL) are strictly forbidden.
-   - UI: Complete 4-state coverage (Loading, Empty, Success, Error).
-5. **Structural Bounding & Anti-Sprawl Hygiene**:
-   - Hard file size ceiling $\le 800$ lines (soft target $\le 400$ lines).
-   - Maximum directory depth $\le 6$ levels from project root.
-   - Co-location of tightly coupled domain artifacts over micro-file fragmentation ($< 20$ lines).
-   - Zero generic dumping grounds (`utils/`, `helpers/`, `misc/`, `common/`).
-6. **Pre-Implementation Change Surface**: No non-trivial code modification is permitted without an approved and mechanically validated Change Surface (`CHANGE_SURFACE.md` or `docs/changes/`).
-7. **2-Pass PR Self-Audit & Merge Protocol**: Mandatory self-auditing across the 10 Enterprise Dimensions. Automated squash-merging (`gh pr merge --squash`) only when 0 blocking defects remain and CI is green; immediate escalation on persistent defects.
-8. **Complete Documentation & NC Protocol**: Ambiguities are recorded as `NEED_CLARIFICATION` (NC) items. Open items older than 14 days mechanically block PR merges. Expand/Contract zero-downtime database migrations.
+Modern AI coding agents generate code at unprecedented velocity, but without strict guardrails, they frequently degrade codebases:
+- **Architectural Erosion**: Leaking ORMs, database schemas, and web frameworks directly into core domain logic.
+- **Fictitious Testing**: Using in-memory emulators (like SQLite mocks for PostgreSQL) that hide production deadlocks and race conditions.
+- **Sprawl & Monoliths**: Writing massive unmaintainable files ($> 1,000$ lines) or dumping code into chaotic `utils/` folders.
+- **Unbounded Blast Radius**: Modifying arbitrary files without declaring or calculating the impact on downstream systems.
+
+**EP-OS turns the tables**: It acts as an autonomous engineering operating system. Every change is mechanically bounded, audited across 10 architectural dimensions, tested against real disposable containers, and gated before merging.
+
+---
+
+## Quick Start: Using EP-OS with AI Agents
+
+You can use EP-OS with **any AI agent platform** (Antigravity, Claude Code, Cursor, Windsurf, Gemini CLI, Codex, etc.).
+
+### 1. Install into Your Agent
+Simply give the GitHub repository URL to your AI agent and ask it to install:
+
+> *"Install the `enterprise-product` skill from https://github.com/sinavali/enterprise-product and activate it."*
+
+Or install it directly via terminal:
+```bash
+git clone https://github.com/sinavali/enterprise-product.git ~/.gemini/config/skills/enterprise-product
+```
+
+### 2. Autonomous First-Turn Ingestion
+The moment the skill is loaded, the agent follows the ingestion protocol defined in [`AGENT.md`](AGENT.md):
+1. **Preflight Verification**: Automatically runs `ep preflight` to verify shell execution, git, and workspace permissions.
+2. **Proactive Activation Greeting**: The agent asks:
+   > *"I have detected the `enterprise-product` engineering operating system. Would you like to activate enterprise governance for this product?"*
+3. **Workspace & Stack Auto-Detection**:
+   Upon confirmation, EP-OS inspects your workspace and automatically selects the required workflow:
+   - **Empty Workspace**: Launches `scaffold` mode (`ep init`).
+   - **Existing Codebase**: Launches `adopt` mode (`ep adopt --apply`) to baseline and onboard without breaking existing builds.
+   - **Active Task / Bug**: Launches `plan` mode to scaffold a `CHANGE_SURFACE.md` or `investigate` mode to reproduce defects in containers.
+   - **Resumed Session**: Automatically restores state checkpoints (`ep session resume`).
+
+---
+
+## Core Engineering Pillars
+
+### 🛡️ 1. The 10-Dimension Enterprise Audit
+Changes are automatically audited against 10 critical enterprise dimensions:
+1. **Scalability & Capacity**: Query pagination, algorithmic complexity, connection pooling.
+2. **Structural Modularity**: Hexagonal Ports & Adapters, zero framework leakage in pure domain.
+3. **Fault Tolerance & Resilience**: Mandatory timeouts, retries with exponential backoff & jitter, circuit breakers.
+4. **Data Integrity & Concurrency**: Optimistic locking, transactional outbox, strict UTC timestamps.
+5. **Security & Zero-Trust**: Injection prevention, zero hardcoded credentials, secret scanning.
+6. **Observability & Operability**: Structured JSON logging, trace propagation, `/healthz` probes.
+7. **Contract & Schema Drift**: OpenAPI 3.1 / Protobuf v3 sync, SemVer contract breaking gates.
+8. **Code Quality & Typing Strictness**: Strict null safety, no raw `any` types, zero swallowed exceptions.
+9. **Documentation & NC Protocol**: Verified Change Surfaces, 0 unresolved questions older than 14 days.
+10. **Test Fidelity & Assertion Quality**: Real ephemeral containers, zero tautological assertions, failure path coverage.
+
+### 🏛️ 2. Clean Architecture & Anti-Sprawl
+- **Hexagonal Domain Isolation**: Core business logic has zero dependencies on databases or UI frameworks.
+- **Rule 2.6 Line Ceilings**: Hard limit of $\le 800$ lines per file (soft target $\le 400$ lines).
+- **Directory Depth**: Maximum 6 levels of nesting from project root. Zero generic dumping grounds (`utils/`, `helpers/`).
+
+### 🐳 3. Real Ephemeral Containers (Testcontainers / Podman)
+Mock databases are strictly forbidden for integration testing. All database tests run against disposable, real container instances (PostgreSQL, Redis, Kafka) using Podman or Testcontainers, guaranteeing zero engine-substitution surprises.
+
+### 🎯 4. Pre-Implementation Change Surface
+Before editing production code, the agent generates and validates a `CHANGE_SURFACE.md`. The mechanical gate (`ep surface check-diff`) halts execution if any file outside the declared blast radius is touched.
+
+### ⚡ 5. Standalone DAG Runner & `ast-grep` Code Intelligence
+- **Zero-Dependency Task DAG Runner**: Kahn's topological dependency ordering (`ep run <project>:<target>`) executes multi-project build graphs with cycle detection.
+- **AST Structural Linting**: Wraps `ast-grep` (`ep ast scan`) to structurally detect tautological assertions, unhandled empty catch blocks, and infinite retry loops across TypeScript, Go, Rust, and Python.
+
+### 🔒 6. Production Human-in-the-Loop Gate
+AI agents are **strictly forbidden from merging into `prod`**. Agents prepare production release candidate PRs (`ep pr create-prod`) with auto-merge permanently disabled. Only human engineers can sign off and merge into production.
+
+---
+
+## Unified Mechanical CLI (`ep`)
+
+All developer and agent operations are consolidated under the zero-dependency `ep` CLI (`scripts/bin/ep` or `python3 scripts/ep.py`):
+
+| Category | Command | Description |
+|---|---|---|
+| **Scaffolding** | `ep init <name> --profile A\|B\|C\|D --lang <stack>` | Scaffold compliant DDD subproject |
+| **Change Surface** | `ep surface init` | Auto-detect modified projects and generate `CHANGE_SURFACE.md` |
+| | `ep surface check-diff` | Halt execution if changes exceed declared blast radius |
+| **Task Execution** | `ep run <project>:<target>` | Execute target in topological dependency order |
+| | `ep run-many --target=<target> --parallel` | Run target across affected projects |
+| **Code Intelligence** | `ep ast scan [--scope <dir>]` | Structural AST syntax scanning via `ast-grep` |
+| | `ep graph --check-boundaries` | Lint Hexagonal domain and library boundaries |
+| **Audit & Verify** | `ep audit [--diff origin/main]` | Run 10-Dimension Enterprise Audit with scorecard |
+| | `ep verify` | Run full mechanical gatekeeper verification suite |
+| **Git & Multi-Branch**| `ep vcs sync-check` | Validate alignment between `main`, `test`, `stage`, and `prod` |
+| | `ep pr create-prod` | Create human-only production PR with auto-merge blocked |
+| **Sessions & State** | `ep session save` / `ep session resume` | Checkpoint and restore agent working memory |
+| **Adoption & Hooks** | `ep adopt [--apply]` | Scan and onboard brownfield monorepos |
+| | `ep hooks install` | Install zero-dependency native git pre-commit hooks |
+
+---
+
+## Universal Manifest Projection
+
+EP-OS maintains a single source of truth in [`AGENT.md`](AGENT.md). Running:
+```bash
+python3 scripts/ep.py manifest sync
+```
+automatically projects instructions into `CLAUDE.md`, `.cursorrules`, and `.windsurfrules`, ensuring 100% behavioral parity regardless of the IDE or agent platform your team uses.
 
 ---
 
@@ -38,125 +123,28 @@
 
 ```text
 enterprise-product/
-├── SKILL.md                          # Main skill entrypoint (modes: plan, implement, audit, verify, pr-audit)
-├── LICENSE                           # MIT License
-├── README.md                         # This guide
-├── references/                       # In-depth architectural & operational specifications
-│   ├── core-directives.md            # Prime Directives P0–P10 & Tier 1/2/3 Master Rulebook
-│   ├── execution-engine.md           # Tool batching, compound commands, context hygiene & lossless density
-│   ├── static-analysis-matrix.md     # Polyglot strict compiler & static analysis matrix
-│   ├── architectural-profiles.md     # Profile A (DDD), Profile B (Web), Profile C (Flutter), Profile D (Contracts)
-│   ├── monorepo-nx-standard.md       # Root Nx orchestration & project.json target contracts
-│   ├── agent-hierarchy-spec.md       # AGENT.md schema, inheritance rules, and precedence
-│   ├── audit-taxonomy.md             # The 10-Dimension Enterprise Audit Guide & checklists
-│   ├── testing-matrix.md             # Value-driven testing rules, testcontainers, coverage gates
-│   ├── vcs-pr-protocol.md            # GitHub Flow, 2-Pass PR Self-Audit algorithm, branch gates
-│   ├── documentation-system.md       # Change Surface, ADR workflow, doc indexing, drift checks
-│   └── nc-protocol.md                # NEED_CLARIFICATION schema, lifecycle, and 14-day escalation
-├── templates/                        # Ready-to-use production templates
-│   ├── profiles/                     # Canonical Nx project.json templates (Go, Rust, Next.js, Flutter, Contracts)
-│   ├── outbox-migration.sql          # Transactional Outbox pattern SQL schema
-│   ├── CHANGE_SURFACE.template.md    # Pre-implementation Change Surface template
-│   ├── NEED_CLARIFICATION.template.md# NC item definition template
-│   ├── ADR.template.md               # Architecture Decision Record template
-│   ├── AGENT.template.md             # Per-project AGENT.md manifest template
-│   ├── AUDIT_REPORT.template.md      # Multi-dimensional audit output template
-│   ├── PR_CONTRACT.template.md       # GitHub PR description & checklist contract
-│   ├── ci-workflow.template.yml      # GitHub Actions enterprise CI workflow (Nx + Audits)
-│   └── pre-commit-config.template.yaml # Git pre-commit hook configuration for local compliance
-├── scripts/                          # Mechanical verification and validation CLI tooling
-│   ├── bin/                          # Executable wrappers (ep, validate-change-surface, etc.)
-│   ├── ep.py                         # Unified EP-OS CLI (surface, migration, hooks, security, adopt, sync-skill)
-│   ├── ep_adopt.py                   # Brownfield monorepo scanner, auto-manifest generator, ratchet baselining
-│   ├── ep_hooks.py                   # Zero-dependency native git hook manager (pre-commit, pre-push, commit-msg)
-│   ├── ep_security.py                # Pre-commit secret scanning engine & copyleft license checker
-│   ├── ep_session.py                 # Multi-session state machine, pause/resume, 15-state rolling retention
-│   ├── ep_stack.py                   # 13-language polyglot stack and framework detector
-│   ├── ep_sync.py                    # Automated bidirectional skill synchronization engine (SHA-256 verified)
-│   ├── ep_vcs.py                     # Multi-tier VCS provider abstraction, sync-check & human-only prod gates
-│   ├── validate-change-surface.py    # Validates Change Surface presence and schema
-│   ├── check-nc-items.py             # Parses open NC items, flags 14-day merge blockers
-│   ├── audit-runner.py               # Runs/scaffolds the 10-dimension audit (with --diff and baselines)
-│   ├── verify-nx-targets.py          # Ensures every project implements standard Nx targets
-│   └── verify-agent-manifests.py     # Validates syntax and inheritance of all AGENT.md files
-└── tests/                            # Self-tests validating the skill's scripts and templates (82 automated tests)
-```
-
----
-
-## The 10-Dimension Enterprise Audit Suite
-
-Every audit evaluates changes across 10 critical dimensions:
-
-1. **Scalability & Capacity**: Algorithmic complexity, indexing, connection pooling, memory streaming.
-2. **Structural Maintainability & Modularity**: Profile conformance, pure domain boundaries, zero circular dependencies.
-3. **Fault Tolerance & Resilience**: Explicit timeouts on all remote calls, retries with exponential backoff & jitter, circuit breakers.
-4. **Data Integrity & Concurrency**: Race condition prevention, atomic transaction boundaries, UTC Storage Convention.
-5. **Security & Zero-Trust**: SQL injection prevention, authentication/authorization checks, zero hardcoded credentials.
-6. **Observability & Operability**: Structured JSON logging, distributed trace context propagation, `/healthz` and `/readyz` probes.
-7. **Contract & Schema Drift**: OpenAPI/Protobuf synchronization, SemVer compliance, zero unversioned breaking changes.
-8. **Code Quality & Typing Strictness**: Strict null safety, no raw `any` types, no swallowed exceptions.
-9. **Documentation & Spec Drift**: Change Surface conformance, mandatory ADRs for Tier 2 deviations, 0 aged NC items.
-10. **Test Fidelity & Assertion Quality**: Real ephemeral containers (Testcontainers/Podman), failure path testing, $\ge 95\%$ domain coverage.
-
----
-
-## Operational Modes
-
-When AI agents interact with the repository, they declare and operate under one of seven distinct modes:
-
-| Mode | Purpose | Command / Workflow |
-|---|---|---|
-| `plan` | Analyzes task, traces impact, generates and validates `Change Surface` | `ep surface validate CHANGE_SURFACE.md` |
-| `investigate` | Read-only codebase reconnaissance, structural search, root cause isolation | `ast-grep scan` / log analysis |
-| `scaffold` | Generates compliant subprojects from profile target templates | `ep init <name> --profile <A\|B\|C\|D> --lang <stack>` |
-| `implement` | Executes TDD implementation strictly bounded to declared surface | `ep surface check-diff` && `nx affected -t test` |
-| `audit` | Runs the 10-Dimension Enterprise Audit; outputs scorecard | `ep audit --diff origin/main` |
-| `verify` | Runs mechanical gates: Nx targets, manifests, NC items, migrations | `ep verify` && `ep migration check --diff` |
-| `pr-audit` | Executes 2-Pass PR Self-Audit protocol; verifies CI, merges or escalates | `gh pr merge --squash` |
-
----
-
-## Installation & Usage
-
-### 1. Adding to an AI Agent Platform
-Clone or install this skill into your agent's skills directory:
-```bash
-git clone https://github.com/sinavali/enterprise-product.git ~/.gemini/config/skills/enterprise-product
-```
-
-### 2. Monorepo Integration
-Copy the standard CI workflow, pre-commit configuration, and target templates into your monorepo:
-```bash
-cp templates/ci-workflow.template.yml .github/workflows/ci.yml
-cp templates/pre-commit-config.template.yaml .pre-commit-config.yaml
-cp templates/profiles/go-service-project.json services/my-service/project.json
-cp templates/AGENT.template.md services/my-service/AGENT.md
-
-# Install local git hooks
-pre-commit install --hook-type pre-commit --hook-type pre-push
-```
-
-### 3. Unified Mechanical CLI (`ep`)
-All compliance checks are accessible via the zero-dependency `ep` CLI tool:
-```bash
-# Check git diff against declared Change Surface (blast-radius guard)
-ep surface check-diff
-
-# Scan database migrations for destructive zero-downtime alterations
-ep migration check --diff
-
-# Generate live architecture topology diagram in Mermaid format
-ep graph --format mermaid
-
-# Scaffold a new fully compliant Profile A backend service in Go
-ep init billing-service --profile A --lang go
-
-# Run 10-Dimension Audit scoped to active PR git diff
-ep audit --diff origin/main
-
-# Run full mechanical gatekeeper suite (Nx targets, AGENT manifests, NC expiration)
-ep verify
+├── AGENT.md               # Root operational manifest for LLMs & AI coding agents
+├── README.md              # Human-facing architecture & usage guide (this file)
+├── SKILL.md               # Antigravity & agent skill declaration
+├── LICENSE                # MIT License
+├── references/            # In-depth architectural & operational standards
+│   ├── architectural-profiles.md  # Profiles A (DDD), B (Web), C (Mobile), D (Contracts)
+│   ├── audit-taxonomy.md          # Complete 10-Dimension audit guide & checklists
+│   ├── execution-engine.md        # Zero-latency execution & tool batching
+│   ├── monorepo-nx-standard.md    # Task DAG & project.json target contracts
+│   ├── testing-matrix.md          # Value-driven testing rules & ephemeral containers
+│   └── vcs-pr-protocol.md         # Multi-branch governance & 2-Pass PR self-audits
+├── templates/             # Production templates (Change Surface, ADR, project.json, etc.)
+├── scripts/               # Zero-dependency mechanical CLI tooling (Python 3.10+)
+│   ├── bin/ep             # Unified executable entrypoint
+│   ├── ep.py              # Core CLI router
+│   ├── ep_ast.py          # ast-grep structural code intelligence
+│   ├── ep_runner.py       # Standalone topological task DAG runner
+│   ├── ep_scaffold.py     # Subproject generator & manifest sync
+│   ├── ep_session.py      # Multi-session state machine & concurrency check
+│   ├── ep_vcs.py          # Multi-tier VCS platform adapters (GitHub, GitLab, Local)
+│   └── audit-runner.py    # 10-Dimension audit engine with baseline ratchets
+└── tests/                 # Comprehensive self-test suite (92 automated tests)
 ```
 
 ---
