@@ -160,17 +160,54 @@ Do not load all reference files simultaneously. Read on demand based on current 
 
 ## 5. Unified Mechanical CLI Tooling (`ep`)
 
-All mechanical gates are accessible through the single executable entrypoint `scripts/bin/ep` (or `python3 scripts/ep.py`):
+All mechanical gates and orchestrations are accessible through the single executable entrypoint `scripts/bin/ep` (or `python3 scripts/ep.py`):
 
 ```bash
+# Scaffolding, Worktrees & Manifests
 ep init <name> --profile [A|B|C|D] --lang [go|rust|ts|dart|php]
+ep worktree create <branch-name>
+ep worktree remove <branch-name>
+ep manifest sync [--root <dir>]
+ep preflight
+
+# Change Surface & Blast Radius
+ep surface init [--output CHANGE_SURFACE.md]
 ep surface validate <path>
 ep surface check-diff [--base origin/main]
+
+# Task DAG Execution (Standalone Zero-Dependency Runner)
+ep run <project>:<target>
+ep run-many --target=<target> [--projects=p1,p2] [--parallel] [--affected]
+
+# Structural Code Intelligence & Boundary Linters
+ep ast scan [--scope <dir>]
+ep graph [--format mermaid|json] [--check-boundaries]
+
+# Audits, Invariants & Migrations
 ep audit [--diff origin/main...HEAD | --scope <path>]
 ep migration check [--dir <migrations-dir>]
 ep verify [--root <monorepo-root>]
 ep nc check [--max-age 14]
-ep worktree create <branch-name>
-ep worktree remove <branch-name>
-ep graph [--format mermaid|json]
+
+# Git, VCS & Multi-Branch Governance
+ep vcs sync-check
+ep pr create-prod [--title <title>] [--body <body>]
+ep release create <version>
+ep release finalize --prod
+ep milestone status
+
+# Sessions, State Machines & Concurrency
+ep session save --session-id <id> --task <task> --mode <mode>
+ep session resume --session-id <id>
+ep session check-collision --session <id>
+ep session list
+ep session prune --session-id <id>
+
+# Security, Licenses, Hooks, Brownfield Adoption & Sync
+ep security scan [--diff origin/main...HEAD]
+ep license check [--package-json <path>]
+ep hooks install
+ep hooks run pre-commit
+ep adopt [--scope <dir>] [--apply]
+ep sync-skill [--check] [--direction to-workspace|to-skill]
 ```
