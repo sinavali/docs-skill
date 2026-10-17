@@ -272,7 +272,33 @@ def run_audit(target_dir: str, max_file_lines: int = 800, max_dir_depth: int = 6
                 
     for f in sorted(files_to_scan):
         all_findings.extend(scan_file_for_violations(f, max_file_lines=max_file_lines))
-        
+
+    # Integrate ast-grep structural scanning when available
+    try:
+        from scripts.ep_ast import is_ast_grep_available, scan_structural_rules
+    except ImportError:
+        try:
+            from ep_ast import is_ast_grep_available, scan_structural_rules
+        except ImportError:
+            is_ast_grep_available = lambda: False
+            scan_structural_rules = lambda scope: []
+
+    if is_ast_grep_available() and os.path.exists(target_dir):
+        ast_findings = scan_structural_rules(target_dir)
+        seen_violations = set()
+        for f in all_findings:
+            parts = f.get("id", "").split("-")
+            rule_num = parts[1] if len(parts) > 1 else f.get("id", "")
+            seen_violations.add((f.get("file", ""), f.get("line", 0), rule_num))
+
+        for af in ast_findings:
+            parts = af.get("id", "").split("-")
+            rule_num = parts[1] if len(parts) > 1 else af.get("id", "")
+            viol_key = (af.get("file", ""), af.get("line", 0), rule_num)
+            if viol_key not in seen_violations:
+                all_findings.append(af)
+                seen_violations.add(viol_key)
+
     # Tally results
     scorecard = {}
     for dim_num, dim_name in DIMENSIONS:
@@ -302,17 +328,21 @@ def filter_against_baseline(findings: List[Dict], baseline_data: Any) -> Tuple[L
     elif not isinstance(baseline_data, list):
         baseline_data = []
 
+    def norm_id(rid: str) -> str:
+        return rid.replace("-AST-", "-") if isinstance(rid, str) else ""
+
     baseline_fingerprints: Set[str] = {
-        f"{b.get('id')}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data if isinstance(b, dict)
+        f"{norm_id(b.get('id', ''))}:{b.get('file')}:{b.get('line', '')}" for b in baseline_data if isinstance(b, dict)
     }
     
     new_findings = []
     suppressed_count = 0
     
     for f in findings:
-        fp = f"{f.get('id')}:{f.get('file')}:{f.get('line', '')}"
+        fid = norm_id(f.get("id", ""))
+        fp = f"{fid}:{f.get('file')}:{f.get('line', '')}"
         # Fallback loose fingerprint (id + file)
-        fp_loose = f"{f.get('id')}:{f.get('file')}:"
+        fp_loose = f"{fid}:{f.get('file')}:"
         
         if fp in baseline_fingerprints or any(b.startswith(fp_loose) for b in baseline_fingerprints):
             suppressed_count += 1

@@ -106,9 +106,15 @@ class LocalGitProvider(BaseGitProvider):
 def get_git_provider() -> BaseGitProvider:
     res = subprocess.run(["git", "config", "remote.origin.url"], capture_output=True, text=True, check=False)
     remote = res.stdout.strip().lower()
-    if "github.com" in remote or shutil.which("gh"):
+    if "github.com" in remote:
         return GitHubProvider()
-    elif "gitlab.com" in remote or shutil.which("glab"):
+    elif "gitlab.com" in remote:
+        return GitLabProvider()
+    elif not remote:
+        return LocalGitProvider()
+    if shutil.which("gh") and ("github" in remote or not remote):
+        return GitHubProvider()
+    elif shutil.which("glab") and "gitlab" in remote:
         return GitLabProvider()
     return LocalGitProvider()
 

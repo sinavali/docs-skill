@@ -6,6 +6,7 @@ Unit and integration tests for validate-change-surface CLI tool.
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -484,6 +485,19 @@ Risk.
         )
         self.assertEqual(proc.returncode, 0)
         self.assertIn("[SUCCESS]", proc.stdout)
+
+    def test_ep_surface_init_scaffolds_valid_surface(self):
+        ep_script = REPO_ROOT / "scripts" / "ep.py"
+        target_file = os.path.join(self.temp_dir, "CHANGE_SURFACE.md")
+        proc = subprocess.run(
+            [sys.executable, str(ep_script), "surface", "init", "--surface-file", target_file, "--scope", "services/order"],
+            cwd=self.temp_dir,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, f"Error: {proc.stderr}")
+        self.assertTrue(os.path.isfile(target_file))
+        self.assertIn("[OK] Initialized Change Surface", proc.stdout)
 
 
 if __name__ == "__main__":

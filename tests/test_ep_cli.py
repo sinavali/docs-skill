@@ -203,6 +203,26 @@ Low
         self.assertEqual(proc_fail.returncode, 1, f"Expected 1: stdout={proc_fail.stdout}, stderr={proc_fail.stderr}")
         self.assertIn("BLAST-RADIUS VIOLATION", proc_fail.stderr)
 
+    def test_graph_check_boundaries(self):
+        # 1. Clean boundary test
+        clean_dir = os.path.join(self.temp_dir, "services", "billing", "domain")
+        os.makedirs(clean_dir, exist_ok=True)
+        with open(os.path.join(clean_dir, "entity.ts"), "w") as f:
+            f.write("export class Invoice { id: string; }\n")
+
+        proc_clean = self.run_ep(["graph", "--check-boundaries", "--root", self.temp_dir])
+        self.assertEqual(proc_clean.returncode, 0, f"Error: {proc_clean.stderr}")
+        self.assertIn("Architectural Boundary Integrity Verified", proc_clean.stdout)
+
+        # 2. Add illegal ORM import into domain
+        with open(os.path.join(clean_dir, "entity.ts"), "a") as f:
+            f.write("import { PrismaClient } from 'prisma';\n")
+
+        proc_violation = self.run_ep(["graph", "--check-boundaries", "--root", self.temp_dir])
+        self.assertEqual(proc_violation.returncode, 1)
+        self.assertIn("Architectural Boundary Violations Detected", proc_violation.stderr)
+        self.assertIn("Domain layer imports ORM", proc_violation.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

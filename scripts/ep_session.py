@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Dict, List, Optional, Set, Tuple
 
 
 def cmd_session(args: argparse.Namespace) -> int:
@@ -131,6 +132,52 @@ def cmd_session(args: argparse.Namespace) -> int:
                         os.remove(os.path.join(entry_path, old_file))
                         pruned_count += 1
         print(f"[OK] Pruned {pruned_count} historical session state files.")
+        return 0
+
+    elif action == "check-collision":
+        if not os.path.exists(registry_file):
+            print("[OK] No active sessions registered. Zero collisions.")
+            return 0
+        with open(registry_file, "r", encoding="utf-8") as f:
+            reg = json.load(f)
+
+        session_files: Dict[str, Set[str]] = {}
+        for sid in reg.keys():
+            curr_path = os.path.join(session_root, sid, "current.json")
+            if os.path.exists(curr_path):
+                try:
+                    with open(curr_path, "r", encoding="utf-8") as cf:
+                        s_data = json.load(cf)
+                    session_files[sid] = set(s_data.get("modified_files", []))
+                except Exception:
+                    pass
+
+        collisions = []
+        target_sids = [session_id] if session_id != "default" and session_id in session_files else list(session_files.keys())
+        checked_pairs = set()
+
+        for s1 in target_sids:
+            for s2, files2 in session_files.items():
+                if s1 == s2:
+                    continue
+                pair_key = tuple(sorted([s1, s2]))
+                if pair_key in checked_pairs:
+                    continue
+                checked_pairs.add(pair_key)
+                overlap = session_files.get(s1, set()).intersection(files2)
+                if overlap:
+                    collisions.append((s1, s2, sorted(list(overlap))))
+
+        if collisions:
+            print("[COLLISION] Concurrent Session Mutation Conflict Detected!", file=sys.stderr)
+            for s1, s2, overlap in collisions:
+                print(f"  ❌ Conflict between Session '{s1}' and '{s2}':", file=sys.stderr)
+                for f in overlap:
+                    print(f"     • {f}", file=sys.stderr)
+            print("\nRemediation: Commit or stash changes before switching contexts, or coordinate worktree separation.", file=sys.stderr)
+            return 1
+
+        print(f"[OK] Concurrency Clean: Zero collisions detected across {len(session_files)} active session(s).")
         return 0
 
     return 0

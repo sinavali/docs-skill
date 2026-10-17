@@ -200,6 +200,35 @@ class TestEpVcsAndSessions(unittest.TestCase):
             f.write("// kotlin gradle\n")
         self.assertEqual(detect_stack(kt_dir)["lang"], "kotlin")
 
+    def test_session_collision_detection(self):
+        # 1. Clean check with zero sessions
+        proc_clean = self.run_ep(["session", "check-collision"], cwd=self.temp_dir)
+        self.assertEqual(proc_clean.returncode, 0)
+        self.assertIn("Zero collisions", proc_clean.stdout)
+
+        # 2. Simulate Session Alpha modifying apps/web/src/App.tsx
+        s_alpha_dir = os.path.join(self.temp_dir, ".ep", "sessions", "session-alpha")
+        os.makedirs(s_alpha_dir, exist_ok=True)
+        with open(os.path.join(s_alpha_dir, "current.json"), "w", encoding="utf-8") as f:
+            json.dump({"session_id": "session-alpha", "modified_files": ["apps/web/src/App.tsx"]}, f)
+
+        # Simulate Session Beta modifying the same file apps/web/src/App.tsx
+        s_beta_dir = os.path.join(self.temp_dir, ".ep", "sessions", "session-beta")
+        os.makedirs(s_beta_dir, exist_ok=True)
+        with open(os.path.join(s_beta_dir, "current.json"), "w", encoding="utf-8") as f:
+            json.dump({"session_id": "session-beta", "modified_files": ["apps/web/src/App.tsx", "libs/core/index.ts"]}, f)
+
+        # Update registry
+        reg_file = os.path.join(self.temp_dir, ".ep", "sessions", "registry.json")
+        with open(reg_file, "w", encoding="utf-8") as f:
+            json.dump({"session-alpha": {}, "session-beta": {}}, f)
+
+        # Run collision check -> must fail with code 1
+        proc_coll = self.run_ep(["session", "check-collision"], cwd=self.temp_dir)
+        self.assertEqual(proc_coll.returncode, 1)
+        self.assertIn("Concurrent Session Mutation Conflict Detected", proc_coll.stderr)
+        self.assertIn("apps/web/src/App.tsx", proc_coll.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
