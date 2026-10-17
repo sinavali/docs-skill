@@ -24,8 +24,12 @@ for p in [REPO_ROOT, SCRIPTS_DIR]:
         sys.path.insert(0, p)
 
 try:
+    from scripts.ep_adopt import cmd_adopt
+    from scripts.ep_hooks import cmd_hooks
+    from scripts.ep_security import cmd_license, cmd_security
     from scripts.ep_session import cmd_session
     from scripts.ep_stack import STACK_DEFINITIONS, detect_stack
+    from scripts.ep_sync import cmd_sync_skill
     from scripts.ep_vcs import (
         BaseGitProvider,
         GitHubProvider,
@@ -36,8 +40,12 @@ try:
         get_git_provider,
     )
 except ImportError:
+    from ep_adopt import cmd_adopt
+    from ep_hooks import cmd_hooks
+    from ep_security import cmd_license, cmd_security
     from ep_session import cmd_session
     from ep_stack import STACK_DEFINITIONS, detect_stack
+    from ep_sync import cmd_sync_skill
     from ep_vcs import (
         BaseGitProvider,
         GitHubProvider,
@@ -650,6 +658,37 @@ def main():
     p_nc.add_argument("action", choices=["check"], help="Action to perform")
     p_nc.add_argument("--max-age", type=int, default=14, help="Max allowed age in days before blocking")
 
+    # hooks
+    p_hooks = subparsers.add_parser("hooks", help="Manage zero-dependency native git hooks")
+    p_hooks.add_argument("action", choices=["install", "uninstall"], help="Hook action")
+    p_hooks.add_argument("--root", default=".", help="Repository root directory")
+
+    # security
+    p_sec = subparsers.add_parser("security", help="Pre-commit secret and credential scanner")
+    p_sec.add_argument("action", choices=["scan"], help="Security action")
+    p_sec.add_argument("--staged", action="store_true", help="Scan only git staged changes")
+    p_sec.add_argument("--diff", default=None, help="Scan git diff against base branch")
+    p_sec.add_argument("--dir", default=None, help="Scan directory files")
+
+    # license
+    p_lic = subparsers.add_parser("license", help="Dependency license and copyleft compliance checker")
+    p_lic.add_argument("action", choices=["check"], help="License action")
+    p_lic.add_argument("--root", default=".", help="Repository root directory")
+    p_lic.add_argument("--sbom", action="store_true", help="Generate .ep/sbom.json")
+
+    # adopt
+    p_adopt = subparsers.add_parser("adopt", help="Brownfield monorepo onboarding and baseline ratcheting")
+    p_adopt.add_argument("--root", default=".", help="Monorepo root directory")
+    p_adopt.add_argument("--profile", default="B", choices=["A", "B", "C", "D", "a", "b", "c", "d"], help="Target Architectural Profile")
+    p_adopt.add_argument("--dry-run", action="store_true", help="Simulate adoption without writing files")
+
+    # sync-skill
+    p_sync = subparsers.add_parser("sync-skill", help="Synchronize skill directory with workspace repository")
+    p_sync.add_argument("--direction", choices=["to-workspace", "to-skill"], default="to-workspace", help="Sync direction")
+    p_sync.add_argument("--check", action="store_true", help="Check parity without modifying files")
+    p_sync.add_argument("--skill-dir", default=None, help="Path to skill directory")
+    p_sync.add_argument("--workspace-dir", default=None, help="Path to workspace clone directory")
+
     args = parser.parse_args()
 
     if not args.subcommand:
@@ -713,6 +752,16 @@ def main():
     elif args.subcommand == "nc":
         cmd = [sys.executable, os.path.join(SCRIPTS_DIR, "check-nc-items.py"), "--max-age", str(args.max_age)]
         sys.exit(subprocess.run(cmd).returncode)
+    elif args.subcommand == "hooks":
+        sys.exit(cmd_hooks(args))
+    elif args.subcommand == "security":
+        sys.exit(cmd_security(args))
+    elif args.subcommand == "license":
+        sys.exit(cmd_license(args))
+    elif args.subcommand == "adopt":
+        sys.exit(cmd_adopt(args))
+    elif args.subcommand == "sync-skill":
+        sys.exit(cmd_sync_skill(args))
 
 
 if __name__ == "__main__":

@@ -62,18 +62,24 @@ enterprise-product/
 │   ├── AGENT.template.md             # Per-project AGENT.md manifest template
 │   ├── AUDIT_REPORT.template.md      # Multi-dimensional audit output template
 │   ├── PR_CONTRACT.template.md       # GitHub PR description & checklist contract
-│   ├── project-target.template.json  # Standardized Nx project.json target contract
 │   ├── ci-workflow.template.yml      # GitHub Actions enterprise CI workflow (Nx + Audits)
 │   └── pre-commit-config.template.yaml # Git pre-commit hook configuration for local compliance
 ├── scripts/                          # Mechanical verification and validation CLI tooling
 │   ├── bin/                          # Executable wrappers (ep, validate-change-surface, etc.)
-│   ├── ep.py                         # Unified EP-OS CLI (surface, migration, graph, init, worktree, audit, verify)
+│   ├── ep.py                         # Unified EP-OS CLI (surface, migration, hooks, security, adopt, sync-skill)
+│   ├── ep_adopt.py                   # Brownfield monorepo scanner, auto-manifest generator, ratchet baselining
+│   ├── ep_hooks.py                   # Zero-dependency native git hook manager (pre-commit, pre-push, commit-msg)
+│   ├── ep_security.py                # Pre-commit secret scanning engine & copyleft license checker
+│   ├── ep_session.py                 # Multi-session state machine, pause/resume, 15-state rolling retention
+│   ├── ep_stack.py                   # 13-language polyglot stack and framework detector
+│   ├── ep_sync.py                    # Automated bidirectional skill synchronization engine (SHA-256 verified)
+│   ├── ep_vcs.py                     # Multi-tier VCS provider abstraction, sync-check & human-only prod gates
 │   ├── validate-change-surface.py    # Validates Change Surface presence and schema
 │   ├── check-nc-items.py             # Parses open NC items, flags 14-day merge blockers
 │   ├── audit-runner.py               # Runs/scaffolds the 10-dimension audit (with --diff and baselines)
 │   ├── verify-nx-targets.py          # Ensures every project implements standard Nx targets
 │   └── verify-agent-manifests.py     # Validates syntax and inheritance of all AGENT.md files
-└── tests/                            # Self-tests validating the skill's scripts and templates
+└── tests/                            # Self-tests validating the skill's scripts and templates (82 automated tests)
 ```
 
 ---
